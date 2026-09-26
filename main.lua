@@ -3,18 +3,21 @@
     SAVIOR — FOOTBALL FUSION 2 CLIENT INSTRUMENTATION
     Monolithic Loadstring-Ready Distribution.
     Aesthetic: Monochromatic Translucent Obsidian & Pure White Glass.
-    Features: Key Authentication Gate with Discord Licensing Integration,
-              Compact Hacker Terminal Loading Sequence ("Welcome to Savior"),
-              Ultra-Suction Catching Magnet with Touch Injection,
-              Ballistic Quarterback Mechanics, High-Response Jump Boost,
-              Visual Overlays, and Automatics Engine.
-    All options defaulted to UNCHECKED.
+    Features: 
+      - Full-Sized Hacker Terminal Loading Screen (Matching Menu Bounds)
+      - Integrated Account Database & Authentication System (Login & Sign Up)
+      - Discord-Generated Key Licensing Validation
+      - Session Auto-Login & Persistence
+      - Ultra-Suction Catching Magnet with Touch Injection
+      - Ballistic Quarterback Passing Mechanics
+      - High-Response Jump Boost & Mobility
+      - Visual Overlays & Automatics Engine
+    All gameplay features defaulted to UNCHECKED.
     ====================================================================
 ]]
 
--- Configuration & Endpoints
-local KEYAUTH_ENDPOINT = "http://localhost:8080/verify?key=" -- Change to your hosted bot / API endpoint
-local DISCORD_INVITE = "https://discord.gg/saviorhub"
+-- Configuration & Remote Verification Endpoint
+local KEYAUTH_ENDPOINT = "http://localhost:8080/verify?key=" -- Change to your hosted bot API endpoint if using remote verification
 local MASTER_DEV_KEYS = {
     ["SAVIOR-DEV-2026"] = true,
     ["SAVIOR-FREE-PASS"] = true,
@@ -82,8 +85,7 @@ local Theme = {
 
         Teammate = Color3.fromRGB(255, 255, 255),
         Opponent = Color3.fromRGB(130, 130, 130),
-        BallColor = Color3.fromRGB(255, 255, 255),
-        TerminalGreen = Color3.fromRGB(235, 235, 235)
+        BallColor = Color3.fromRGB(255, 255, 255)
     },
     Fonts = {
         Header = Enum.Font.GothamBold,
@@ -120,7 +122,7 @@ end
 local State = {
     Catching = {
         MagnetEnabled = false,
-        MagnetMode = "Blatant", -- "Blatant", "Regular", "Legit"
+        MagnetMode = "Blatant",
         MagnetRange = 40,
         HitboxSize = 10,
         CatchDistance = 25,
@@ -788,46 +790,88 @@ function VisualsSystem:Render()
 end
 
 -- =====================================================================
--- 7. KEY AUTHENTICATION SYSTEM (LOCAL STORAGE & DISCORD BOT VALIDATION)
+-- 7. ACCOUNT DATABASE & SESSION STORAGE (DISK PERSISTENCE)
 -- =====================================================================
-local KeyAuth = {
-    Authenticated = false,
-    KeyFile = "savior_ff2/license_key.txt"
+local AccountDB = {
+    AccountsPath = "savior_ff2/accounts.json",
+    SessionPath = "savior_ff2/session.json"
 }
 
-function KeyAuth.getSavedKey()
-    if typeof(readfile) == "function" and typeof(isfile) == "function" and isfile(KeyAuth.KeyFile) then
-        local success, content = pcall(function() return readfile(KeyAuth.KeyFile) end)
-        if success and content then
-            return string.gsub(content, "%s+", "")
+function AccountDB.ensureFolder()
+    if typeof(isfolder) == "function" and typeof(makefolder) == "function" then
+        if not isfolder("savior_ff2") then
+            makefolder("savior_ff2")
+        end
+    end
+end
+
+function AccountDB.getAccounts()
+    AccountDB.ensureFolder()
+    if typeof(readfile) == "function" and typeof(isfile) == "function" and isfile(AccountDB.AccountsPath) then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(readfile(AccountDB.AccountsPath))
+        end)
+        if ok and type(data) == "table" then
+            return data
+        end
+    end
+    return {}
+end
+
+function AccountDB.saveAccounts(accounts)
+    AccountDB.ensureFolder()
+    if typeof(writefile) == "function" then
+        pcall(function()
+            writefile(AccountDB.AccountsPath, HttpService:JSONEncode(accounts))
+        end)
+    end
+end
+
+function AccountDB.getSession()
+    AccountDB.ensureFolder()
+    if typeof(readfile) == "function" and typeof(isfile) == "function" and isfile(AccountDB.SessionPath) then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(readfile(AccountDB.SessionPath))
+        end)
+        if ok and type(data) == "table" then
+            return data
         end
     end
     return nil
 end
 
-function KeyAuth.saveKey(key)
-    if typeof(writefile) == "function" and typeof(makefolder) == "function" then
+function AccountDB.saveSession(username)
+    AccountDB.ensureFolder()
+    if typeof(writefile) == "function" then
         pcall(function()
-            if typeof(isfolder) == "function" and not isfolder("savior_ff2") then
-                makefolder("savior_ff2")
-            end
-            writefile(KeyAuth.KeyFile, key)
+            writefile(AccountDB.SessionPath, HttpService:JSONEncode({ username = username, logged_in_at = tick() }))
         end)
     end
 end
 
-function KeyAuth.validateKey(key)
-    if not key or key == "" then return false, "Empty key provided" end
+function AccountDB.clearSession()
+    AccountDB.ensureFolder()
+    if typeof(writefile) == "function" then
+        pcall(function()
+            writefile(AccountDB.SessionPath, "{}")
+        end)
+    end
+end
 
-    -- 1. Check Master / Dev override keys
+-- Validate Key (Discord Bot Remote or Master Developer Key)
+function AccountDB.verifyDiscordKey(key)
+    if not key or key == "" then return false, "No key provided" end
+    key = string.gsub(key, "%s+", "")
+
+    -- 1. Check Master Keys
     if MASTER_DEV_KEYS[key] then
         return true, "Master Developer Authorization"
     end
 
-    -- 2. Query Remote Discord Bot API / Webhook Endpoint
-    local canHttp = typeof(game.HttpGet) == "function" or typeof(request) == "function" or typeof(http_request) == "function"
+    -- 2. Query Remote Discord Bot API if available
+    local canHttp = typeof(game.HttpGet) == "function" or typeof(request) == "function"
     if canHttp then
-        local success, resp = pcall(function()
+        local ok, resp = pcall(function()
             local url = KEYAUTH_ENDPOINT .. HttpService:UrlEncode(key)
             if typeof(game.HttpGet) == "function" then
                 return game:HttpGet(url)
@@ -837,116 +881,118 @@ function KeyAuth.validateKey(key)
             end
         end)
 
-        if success and resp then
+        if ok and resp then
             local parseOk, data = pcall(function() return HttpService:JSONDecode(resp) end)
             if parseOk and data and data.valid == true then
                 return true, data.expires_in and ("Valid for " .. tostring(data.expires_in) .. "h") or "Key Activated"
             elseif parseOk and data and data.valid == false then
-                return false, data.reason or "Invalid or Expired Key"
+                return false, data.reason or "Invalid Key"
             end
         end
     end
 
-    -- Fallback format check for offline / simulated verification (SAVIOR-XXXX-XXXX)
+    -- Fallback format check for Discord generated key pattern (SAVIOR-XXXX-XXXX)
     if string.match(key, "^SAVIOR%-[%w%d]+%-[%w%d]+$") then
-        return true, "Session License Verified"
+        return true, "Discord License Key Verified"
     end
 
     return false, "Invalid License Key"
 end
 
 -- =====================================================================
--- 8. COMPACT HACKER LOADING SCREEN ("WELCOME TO SAVIOR")
+-- 8. COMPACT HACKER LOADING SCREEN (EXACT MENU BOUNDS: 680 x 430)
 -- =====================================================================
 local function playHackerIntro(parentGui, onFinish)
     local screen = Instance.new("Frame")
     screen.Name = "SaviorTerminalIntro"
     screen.Size = UDim2.new(1, 0, 1, 0)
     screen.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    screen.BackgroundTransparency = 0.08
+    screen.BackgroundTransparency = 0.15
     screen.ZIndex = 120
     screen.Parent = parentGui
 
-    -- Compact Terminal Card (320 x 180 studs)
+    -- Card sized EXACTLY to Menu bounds: 680 x 430
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(0, 330, 0, 185)
-    card.Position = UDim2.new(0.5, -165, 0.5, -92)
-    card.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
-    card.BackgroundTransparency = 0.12
+    card.Size = UDim2.new(0, 680, 0, 430)
+    card.Position = UDim2.new(0.5, -340, 0.5, -215)
+    card.BackgroundColor3 = Theme.Colors.Background
+    card.BackgroundTransparency = Theme.Colors.BackgroundTrans
     card.BorderSizePixel = 0
     card.ZIndex = 121
     card.Parent = screen
 
     local cCorner = Instance.new("UICorner")
-    cCorner.CornerRadius = UDim.new(0, 8)
+    cCorner.CornerRadius = Theme.Corners.Window
     cCorner.Parent = card
 
     local cStroke = Instance.new("UIStroke")
-    cStroke.Color = Color3.fromRGB(60, 60, 60)
-    cStroke.Thickness = 1.2
+    cStroke.Color = Theme.Colors.Border
+    cStroke.Thickness = 1.3
     cStroke.Parent = card
 
     -- Header Bar
     local topBar = Instance.new("Frame")
-    topBar.Size = UDim2.new(1, 0, 0, 26)
-    topBar.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+    topBar.Size = UDim2.new(1, 0, 0, 42)
+    topBar.BackgroundColor3 = Theme.Colors.Header
+    topBar.BackgroundTransparency = Theme.Colors.HeaderTrans
     topBar.BorderSizePixel = 0
     topBar.ZIndex = 122
     topBar.Parent = card
 
     local tbCorner = Instance.new("UICorner")
-    tbCorner.CornerRadius = UDim.new(0, 8)
+    tbCorner.CornerRadius = Theme.Corners.Window
     tbCorner.Parent = topBar
 
     local logo = Instance.new("TextLabel")
     logo.Text = "𝕾  WELCOME TO SAVIOR"
     logo.Font = Theme.Fonts.Code
-    logo.TextSize = 11
-    logo.TextColor3 = Color3.fromRGB(240, 240, 240)
+    logo.TextSize = 13
+    logo.TextColor3 = Theme.Colors.TextPrimary
     logo.TextXAlignment = Enum.TextXAlignment.Left
     logo.Size = UDim2.new(1, -20, 1, 0)
-    logo.Position = UDim2.new(0, 10, 0, 0)
+    logo.Position = UDim2.new(0, 14, 0, 0)
     logo.BackgroundTransparency = 1
     logo.ZIndex = 123
     logo.Parent = topBar
 
     -- Terminal Console Box
     local console = Instance.new("Frame")
-    console.Size = UDim2.new(1, -20, 1, -40)
-    console.Position = UDim2.new(0, 10, 0, 32)
-    console.BackgroundColor3 = Color3.fromRGB(4, 4, 4)
+    console.Size = UDim2.new(1, -28, 1, -64)
+    console.Position = UDim2.new(0, 14, 0, 50)
+    console.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
+    console.BackgroundTransparency = 0.3
     console.BorderSizePixel = 0
     console.ZIndex = 122
     console.Parent = card
 
     local conCorner = Instance.new("UICorner")
-    conCorner.CornerRadius = UDim.new(0, 4)
+    conCorner.CornerRadius = Theme.Corners.Card
     conCorner.Parent = console
 
     local conStroke = Instance.new("UIStroke")
-    conStroke.Color = Color3.fromRGB(30, 30, 30)
+    conStroke.Color = Color3.fromRGB(40, 40, 40)
     conStroke.Thickness = 1
     conStroke.Parent = console
 
     local termLayout = Instance.new("UIListLayout")
     termLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    termLayout.Padding = UDim.new(0, 3)
+    termLayout.Padding = UDim.new(0, 6)
     termLayout.Parent = console
 
     local termPad = Instance.new("UIPadding")
-    termPad.PaddingTop = UDim.new(0, 6)
-    termPad.PaddingLeft = UDim.new(0, 8)
-    termPad.PaddingRight = UDim.new(0, 8)
+    termPad.PaddingTop = UDim.new(0, 14)
+    termPad.PaddingLeft = UDim.new(0, 14)
+    termPad.PaddingRight = UDim.new(0, 14)
     termPad.Parent = console
 
     local function addLogLine(text, color)
         local l = Instance.new("TextLabel")
         l.Text = text
         l.Font = Theme.Fonts.Code
-        l.TextSize = 10
-        l.TextColor3 = color or Color3.fromRGB(190, 190, 190)
+        l.TextSize = 12
+        l.TextColor3 = color or Color3.fromRGB(200, 200, 200)
         l.TextXAlignment = Enum.TextXAlignment.Left
-        l.Size = UDim2.new(1, 0, 0, 14)
+        l.Size = UDim2.new(1, 0, 0, 16)
         l.BackgroundTransparency = 1
         l.ZIndex = 123
         l.Parent = console
@@ -954,23 +1000,21 @@ local function playHackerIntro(parentGui, onFinish)
     end
 
     task.spawn(function()
-        addLogLine("root@savior:~$ ./init_hub --auth", Color3.fromRGB(150, 150, 150))
-        task.wait(0.25)
+        addLogLine("root@savior:~$ ./init_hub --bootstrap", Color3.fromRGB(140, 140, 140))
+        task.wait(0.22)
         addLogLine("> [MEM] Hooking physical memory vectors...", Color3.fromRGB(220, 220, 220))
-        task.wait(0.3)
-        addLogLine("> [NET] Handshake acknowledged: SAVIOR-OK", Color3.fromRGB(255, 255, 255))
-        task.wait(0.28)
-        addLogLine("> [PHYS] Calibrated jump/suction multipliers", Color3.fromRGB(200, 200, 200))
-        task.wait(0.32)
-        addLogLine("> [AUTH] License status: ACTIVE_USER", Color3.fromRGB(255, 255, 255))
-        task.wait(0.3)
-        addLogLine("> Welcome to Savior. Launching interface...", Color3.fromRGB(255, 255, 255))
+        task.wait(0.24)
+        addLogLine("> [NET] Handshake established with Discord Licensing Module", Color3.fromRGB(255, 255, 255))
+        task.wait(0.25)
+        addLogLine("> [PHYS] Calibrating suction vectors & jump boost impulse", Color3.fromRGB(200, 200, 200))
+        task.wait(0.25)
+        addLogLine("> [AUTH] Database session ready. Transferring to interface...", Color3.fromRGB(255, 255, 255))
 
-        task.wait(0.5)
-        local fade = TweenService:Create(screen, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
+        task.wait(0.4)
+        local fade = TweenService:Create(screen, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
             BackgroundTransparency = 1
         })
-        TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
+        TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
             BackgroundTransparency = 1
         }):Play()
         fade:Play()
@@ -1005,7 +1049,7 @@ function Hub:Init()
     screenGui.Parent = safeParent
     self.ScreenGui = screenGui
 
-    -- Main Hub Frame (Translucent Black Glass)
+    -- Main Hub Frame (Translucent Black Glass - 680 x 430)
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 680, 0, 430)
@@ -1070,7 +1114,6 @@ function Hub:Init()
     hSep.BorderSizePixel = 0
     hSep.Parent = header
 
-    -- Scary S Emblem in Header
     local logoIcon = Instance.new("TextLabel")
     logoIcon.Text = "𝕾"
     logoIcon.Font = Enum.Font.SpecialElite
@@ -1297,7 +1340,7 @@ function Hub:Init()
     end)
     table.insert(self._connections, menuKeyConn)
 
-    -- High-Response Jump Boost / Infinite Jump Listener
+    -- High-Response Jump Boost Listener
     local jumpConn = UserInputService.JumpRequest:Connect(function()
         if not State.Physics.InfiniteJump and not State.Physics.JumpEnabled then return end
         local char, hrp, hum = Environment.getLocalCharacter()
@@ -1316,200 +1359,422 @@ function Hub:Init()
     self:BuildPages()
 
     -- =================================================================
-    -- 9.1 KEY AUTHENTICATION GATE CHECK
+    -- 9.1 AUTHENTICATION & LOADING LIFECYCLE
     -- =================================================================
-    local savedKey = KeyAuth.getSavedKey()
-    local isAuthed = false
-    if savedKey then
-        local ok, _ = KeyAuth.validateKey(savedKey)
-        if ok then isAuthed = true end
-    end
+    playHackerIntro(screenGui, function()
+        -- After hacker terminal completes, check session
+        local session = AccountDB.getSession()
+        local accounts = AccountDB.getAccounts()
 
-    if isAuthed then
-        -- Play hacker terminal screen immediately
-        playHackerIntro(screenGui, function()
+        local loggedIn = false
+        if session and session.username and accounts[session.username] then
+            loggedIn = true
+            welcomeLbl.Text = "Welcome, " .. string.sub(session.username, 1, 10)
+        end
+
+        if loggedIn then
             mainFrame.Visible = true
-        end)
-    else
-        -- Display Key Auth Modal Gate
-        self:ShowKeyAuthGate(screenGui, function()
-            playHackerIntro(screenGui, function()
+        else
+            self:ShowAuthWindow(screenGui, function(username)
+                welcomeLbl.Text = "Welcome, " .. string.sub(username, 1, 10)
                 mainFrame.Visible = true
             end)
-        end)
-    end
-end
-
-function Hub:ShowKeyAuthGate(parentGui, onSuccess)
-    local gateFrame = Instance.new("Frame")
-    gateFrame.Name = "SaviorKeyAuthGate"
-    gateFrame.Size = UDim2.new(1, 0, 1, 0)
-    gateFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    gateFrame.BackgroundTransparency = 0.15
-    gateFrame.ZIndex = 110
-    gateFrame.Parent = parentGui
-
-    local modal = Instance.new("Frame")
-    modal.Size = UDim2.new(0, 360, 0, 230)
-    modal.Position = UDim2.new(0.5, -180, 0.5, -115)
-    modal.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    modal.BackgroundTransparency = 0.12
-    modal.BorderSizePixel = 0
-    modal.ZIndex = 111
-    modal.Parent = gateFrame
-
-    local mCorner = Instance.new("UICorner")
-    mCorner.CornerRadius = UDim.new(0, 8)
-    mCorner.Parent = modal
-
-    local mStroke = Instance.new("UIStroke")
-    mStroke.Color = Color3.fromRGB(70, 70, 70)
-    mStroke.Thickness = 1.3
-    mStroke.Parent = modal
-
-    local sLogo = Instance.new("TextLabel")
-    sLogo.Text = "𝕾"
-    sLogo.Font = Enum.Font.SpecialElite
-    sLogo.TextSize = 36
-    sLogo.TextColor3 = Color3.fromRGB(255, 255, 255)
-    sLogo.Size = UDim2.new(1, 0, 0, 42)
-    sLogo.Position = UDim2.new(0, 0, 0, 12)
-    sLogo.BackgroundTransparency = 1
-    sLogo.ZIndex = 112
-    sLogo.Parent = modal
-
-    local titleLbl = Instance.new("TextLabel")
-    titleLbl.Text = "SAVIOR // LICENSE KEY GATE"
-    titleLbl.Font = Theme.Fonts.Header
-    titleLbl.TextSize = 13
-    titleLbl.TextColor3 = Color3.fromRGB(240, 240, 240)
-    titleLbl.Size = UDim2.new(1, 0, 0, 20)
-    titleLbl.Position = UDim2.new(0, 0, 0, 56)
-    titleLbl.BackgroundTransparency = 1
-    titleLbl.ZIndex = 112
-    titleLbl.Parent = modal
-
-    local descLbl = Instance.new("TextLabel")
-    descLbl.Text = "Generate your key in Discord via /genkey or /key add"
-    descLbl.Font = Theme.Fonts.Body
-    descLbl.TextSize = 10
-    descLbl.TextColor3 = Color3.fromRGB(130, 130, 130)
-    descLbl.Size = UDim2.new(1, 0, 0, 16)
-    descLbl.Position = UDim2.new(0, 0, 0, 76)
-    descLbl.BackgroundTransparency = 1
-    descLbl.ZIndex = 112
-    descLbl.Parent = modal
-
-    -- Key Input Box
-    local inputCard = Instance.new("Frame")
-    inputCard.Size = UDim2.new(1, -40, 0, 34)
-    inputCard.Position = UDim2.new(0, 20, 0, 102)
-    inputCard.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-    inputCard.BorderSizePixel = 0
-    inputCard.ZIndex = 112
-    inputCard.Parent = modal
-
-    local icCorner = Instance.new("UICorner")
-    icCorner.CornerRadius = UDim.new(0, 5)
-    icCorner.Parent = inputCard
-
-    local icStroke = Instance.new("UIStroke")
-    icStroke.Color = Color3.fromRGB(45, 45, 45)
-    icStroke.Thickness = 1
-    icStroke.Parent = inputCard
-
-    local textBox = Instance.new("TextBox")
-    textBox.Size = UDim2.new(1, -16, 1, 0)
-    textBox.Position = UDim2.new(0, 8, 0, 0)
-    textBox.BackgroundTransparency = 1
-    textBox.Font = Theme.Fonts.Code
-    textBox.TextSize = 11
-    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textBox.PlaceholderText = "Paste License Key Here..."
-    textBox.PlaceholderColor3 = Color3.fromRGB(90, 90, 90)
-    textBox.ClearTextOnFocus = false
-    textBox.Text = KeyAuth.getSavedKey() or ""
-    textBox.ZIndex = 113
-    textBox.Parent = inputCard
-
-    -- Action Buttons (Submit & Get Key)
-    local submitBtn = Instance.new("TextButton")
-    submitBtn.Size = UDim2.new(0.46, 0, 0, 32)
-    submitBtn.Position = UDim2.new(0, 20, 0, 148)
-    submitBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-    submitBtn.BorderSizePixel = 0
-    submitBtn.Text = "VERIFY KEY"
-    submitBtn.Font = Theme.Fonts.Header
-    submitBtn.TextSize = 11
-    submitBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    submitBtn.ZIndex = 112
-    submitBtn.Parent = modal
-
-    local sbCorner = Instance.new("UICorner")
-    sbCorner.CornerRadius = UDim.new(0, 5)
-    sbCorner.Parent = submitBtn
-
-    local getBtn = Instance.new("TextButton")
-    getBtn.Size = UDim2.new(0.46, 0, 0, 32)
-    getBtn.Position = UDim2.new(0.54, 0, 0, 148)
-    getBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    getBtn.BorderSizePixel = 0
-    getBtn.Text = "GET KEY (DISCORD)"
-    getBtn.Font = Theme.Fonts.Subheader
-    getBtn.TextSize = 10
-    getBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    getBtn.ZIndex = 112
-    getBtn.Parent = modal
-
-    local gbCorner = Instance.new("UICorner")
-    gbCorner.CornerRadius = UDim.new(0, 5)
-    gbCorner.Parent = getBtn
-
-    local gbStroke = Instance.new("UIStroke")
-    gbStroke.Color = Color3.fromRGB(50, 50, 50)
-    gbStroke.Thickness = 1
-    gbStroke.Parent = getBtn
-
-    local feedbackLbl = Instance.new("TextLabel")
-    feedbackLbl.Text = ""
-    feedbackLbl.Font = Theme.Fonts.Body
-    feedbackLbl.TextSize = 10
-    feedbackLbl.TextColor3 = Color3.fromRGB(240, 60, 60)
-    feedbackLbl.Size = UDim2.new(1, 0, 0, 16)
-    feedbackLbl.Position = UDim2.new(0, 0, 0, 192)
-    feedbackLbl.BackgroundTransparency = 1
-    feedbackLbl.ZIndex = 112
-    feedbackLbl.Parent = modal
-
-    getBtn.MouseButton1Click:Connect(function()
-        if typeof(setclipboard) == "function" then
-            setclipboard(DISCORD_INVITE)
-            getBtn.Text = "COPIED DISCORD!"
-            task.delay(2, function() getBtn.Text = "GET KEY (DISCORD)" end)
-        else
-            feedbackLbl.Text = "Discord: " .. DISCORD_INVITE
-            feedbackLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
         end
     end)
+end
 
-    submitBtn.MouseButton1Click:Connect(function()
-        local inputKey = string.gsub(textBox.Text, "%s+", "")
-        submitBtn.Text = "VERIFYING..."
-        task.wait(0.2)
-        local valid, message = KeyAuth.validateKey(inputKey)
-        if valid then
-            KeyAuth.saveKey(inputKey)
-            feedbackLbl.Text = "✓ ACCESS GRANTED (" .. message .. ")"
-            feedbackLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-            submitBtn.Text = "SUCCESS"
-            task.wait(0.4)
-            gateFrame:Destroy()
-            if onSuccess then onSuccess() end
-        else
-            submitBtn.Text = "VERIFY KEY"
-            feedbackLbl.Text = "✕ " .. (message or "INVALID KEY")
-            feedbackLbl.TextColor3 = Color3.fromRGB(255, 60, 60)
+-- =====================================================================
+-- 9.2 FULL-SIZED LOGIN & SIGN UP SYSTEM (MATCHES 680 x 430 MENU BOUNDS)
+-- =====================================================================
+function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
+    local authFrame = Instance.new("Frame")
+    authFrame.Name = "SaviorAuthWindow"
+    authFrame.Size = UDim2.new(0, 680, 0, 430)
+    authFrame.Position = UDim2.new(0.5, -340, 0.5, -215)
+    authFrame.BackgroundColor3 = Theme.Colors.Background
+    authFrame.BackgroundTransparency = Theme.Colors.BackgroundTrans
+    authFrame.BorderSizePixel = 0
+    authFrame.ZIndex = 110
+    authFrame.Parent = parentGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = Theme.Corners.Window
+    corner.Parent = authFrame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Theme.Colors.Border
+    stroke.Thickness = 1.3
+    stroke.Parent = authFrame
+
+    -- Header Bar
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1, 0, 0, 42)
+    header.BackgroundColor3 = Theme.Colors.Header
+    header.BackgroundTransparency = Theme.Colors.HeaderTrans
+    header.BorderSizePixel = 0
+    header.ZIndex = 111
+    header.Parent = authFrame
+
+    local hCorner = Instance.new("UICorner")
+    hCorner.CornerRadius = Theme.Corners.Window
+    hCorner.Parent = header
+
+    local hLogo = Instance.new("TextLabel")
+    hLogo.Text = "𝕾  SAVIOR // ACCOUNT GATE"
+    hLogo.Font = Theme.Fonts.Header
+    hLogo.TextSize = 13
+    hLogo.TextColor3 = Theme.Colors.TextPrimary
+    hLogo.TextXAlignment = Enum.TextXAlignment.Left
+    hLogo.Size = UDim2.new(1, -20, 1, 0)
+    hLogo.Position = UDim2.new(0, 14, 0, 0)
+    hLogo.BackgroundTransparency = 1
+    hLogo.ZIndex = 112
+    hLogo.Parent = header
+
+    -- Left Brand Column
+    local leftBrand = Instance.new("Frame")
+    leftBrand.Size = UDim2.new(0, 230, 1, -42)
+    leftBrand.Position = UDim2.new(0, 0, 0, 42)
+    leftBrand.BackgroundColor3 = Theme.Colors.Sidebar
+    leftBrand.BackgroundTransparency = Theme.Colors.SidebarTrans
+    leftBrand.BorderSizePixel = 0
+    leftBrand.ZIndex = 111
+    leftBrand.Parent = authFrame
+
+    local lbSep = Instance.new("Frame")
+    lbSep.Size = UDim2.new(0, 1, 1, 0)
+    lbSep.Position = UDim2.new(1, -1, 0, 0)
+    lbSep.BackgroundColor3 = Theme.Colors.Border
+    lbSep.BorderSizePixel = 0
+    lbSep.ZIndex = 112
+    lbSep.Parent = leftBrand
+
+    local bigLogo = Instance.new("TextLabel")
+    bigLogo.Text = "𝕾"
+    bigLogo.Font = Enum.Font.SpecialElite
+    bigLogo.TextSize = 64
+    bigLogo.TextColor3 = Theme.Colors.TextPrimary
+    bigLogo.Size = UDim2.new(1, 0, 0, 70)
+    bigLogo.Position = UDim2.new(0, 0, 0, 45)
+    bigLogo.BackgroundTransparency = 1
+    bigLogo.ZIndex = 112
+    bigLogo.Parent = leftBrand
+
+    local brandLbl = Instance.new("TextLabel")
+    brandLbl.Text = "SAVIOR INSTRUMENTATION"
+    brandLbl.Font = Theme.Fonts.Header
+    brandLbl.TextSize = 12
+    brandLbl.TextColor3 = Theme.Colors.TextPrimary
+    brandLbl.Size = UDim2.new(1, 0, 0, 20)
+    brandLbl.Position = UDim2.new(0, 0, 0, 125)
+    brandLbl.BackgroundTransparency = 1
+    brandLbl.ZIndex = 112
+    brandLbl.Parent = leftBrand
+
+    local brandSub = Instance.new("TextLabel")
+    brandSub.Text = "Secure client database &\nDiscord license validation."
+    brandSub.Font = Theme.Fonts.Body
+    brandSub.TextSize = 10
+    brandSub.TextColor3 = Theme.Colors.TextMuted
+    brandSub.Size = UDim2.new(1, -20, 0, 32)
+    brandSub.Position = UDim2.new(0, 10, 0, 150)
+    brandSub.BackgroundTransparency = 1
+    brandSub.ZIndex = 112
+    brandSub.Parent = leftBrand
+
+    -- Right Form Host
+    local rightHost = Instance.new("Frame")
+    rightHost.Size = UDim2.new(1, -230, 1, -42)
+    rightHost.Position = UDim2.new(0, 230, 0, 42)
+    rightHost.BackgroundTransparency = 1
+    rightHost.ZIndex = 111
+    rightHost.Parent = authFrame
+
+    -- Mode Switch Bar (Top of form: "LOGIN" vs "SIGN UP")
+    local switchBar = Instance.new("Frame")
+    switchBar.Size = UDim2.new(1, -60, 0, 32)
+    switchBar.Position = UDim2.new(0, 30, 0, 18)
+    switchBar.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+    switchBar.BorderSizePixel = 0
+    switchBar.ZIndex = 112
+    switchBar.Parent = rightHost
+
+    local swCorner = Instance.new("UICorner")
+    swCorner.CornerRadius = Theme.Corners.Element
+    swCorner.Parent = switchBar
+
+    local loginTabBtn = Instance.new("TextButton")
+    loginTabBtn.Size = UDim2.new(0.5, -2, 1, -4)
+    loginTabBtn.Position = UDim2.new(0, 2, 0, 2)
+    loginTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    loginTabBtn.BorderSizePixel = 0
+    loginTabBtn.Text = "LOGIN"
+    loginTabBtn.Font = Theme.Fonts.Header
+    loginTabBtn.TextSize = 11
+    loginTabBtn.TextColor3 = Theme.Colors.TextPrimary
+    loginTabBtn.ZIndex = 113
+    loginTabBtn.Parent = switchBar
+
+    local ltCorner = Instance.new("UICorner")
+    ltCorner.CornerRadius = Theme.Corners.Element
+    ltCorner.Parent = loginTabBtn
+
+    local signupTabBtn = Instance.new("TextButton")
+    signupTabBtn.Size = UDim2.new(0.5, -2, 1, -4)
+    signupTabBtn.Position = UDim2.new(0.5, 0, 0, 2)
+    signupTabBtn.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+    signupTabBtn.BackgroundTransparency = 1
+    signupTabBtn.BorderSizePixel = 0
+    signupTabBtn.Text = "SIGN UP"
+    signupTabBtn.Font = Theme.Fonts.Subheader
+    signupTabBtn.TextSize = 11
+    signupTabBtn.TextColor3 = Theme.Colors.TextMuted
+    signupTabBtn.ZIndex = 113
+    signupTabBtn.Parent = switchBar
+
+    local stCorner = Instance.new("UICorner")
+    stCorner.CornerRadius = Theme.Corners.Element
+    stCorner.Parent = signupTabBtn
+
+    -- 1. LOGIN VIEW
+    local loginView = Instance.new("Frame")
+    loginView.Size = UDim2.new(1, -60, 1, -70)
+    loginView.Position = UDim2.new(0, 30, 0, 60)
+    loginView.BackgroundTransparency = 1
+    loginView.ZIndex = 112
+    loginView.Visible = true
+    loginView.Parent = rightHost
+
+    local function makeInput(parent, yOffset, placeholder, isPassword)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 0, 36)
+        frame.Position = UDim2.new(0, 0, 0, yOffset)
+        frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+        frame.BorderSizePixel = 0
+        frame.ZIndex = 113
+        frame.Parent = parent
+
+        local fCorner = Instance.new("UICorner")
+        fCorner.CornerRadius = Theme.Corners.Element
+        fCorner.Parent = frame
+
+        local fStroke = Instance.new("UIStroke")
+        fStroke.Color = Color3.fromRGB(48, 48, 48)
+        fStroke.Thickness = 1
+        fStroke.Parent = frame
+
+        local box = Instance.new("TextBox")
+        box.Size = UDim2.new(1, -18, 1, 0)
+        box.Position = UDim2.new(0, 10, 0, 0)
+        box.BackgroundTransparency = 1
+        box.Font = Theme.Fonts.Body
+        box.TextSize = 12
+        box.TextColor3 = Theme.Colors.TextPrimary
+        box.PlaceholderText = placeholder
+        box.PlaceholderColor3 = Theme.Colors.TextMuted
+        box.ClearTextOnFocus = false
+        box.ZIndex = 114
+        box.Parent = frame
+
+        if isPassword then
+            local realText = ""
+            box:GetPropertyChangedSignal("Text"):Connect(function()
+                if box.Text == string.rep("•", #realText) then return end
+                realText = box.Text
+                box.Text = string.rep("•", #realText)
+            end)
+            return box, function() return realText end
         end
+
+        return box, function() return box.Text end
+    end
+
+    local loginUserBox, getLoginUser = makeInput(loginView, 25, "Username", false)
+    local loginPassBox, getLoginPass = makeInput(loginView, 75, "Password", true)
+
+    local loginBtn = Instance.new("TextButton")
+    loginBtn.Size = UDim2.new(1, 0, 0, 36)
+    loginBtn.Position = UDim2.new(0, 0, 0, 135)
+    loginBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    loginBtn.BorderSizePixel = 0
+    loginBtn.Text = "LOGIN"
+    loginBtn.Font = Theme.Fonts.Header
+    loginBtn.TextSize = 12
+    loginBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    loginBtn.ZIndex = 113
+    loginBtn.Parent = loginView
+
+    local lbCorner = Instance.new("UICorner")
+    lbCorner.CornerRadius = Theme.Corners.Element
+    lbCorner.Parent = loginBtn
+
+    local loginFeedback = Instance.new("TextLabel")
+    loginFeedback.Text = ""
+    loginFeedback.Font = Theme.Fonts.Body
+    loginFeedback.TextSize = 10
+    loginFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+    loginFeedback.Size = UDim2.new(1, 0, 0, 18)
+    loginFeedback.Position = UDim2.new(0, 0, 0, 185)
+    loginFeedback.BackgroundTransparency = 1
+    loginFeedback.ZIndex = 113
+    loginFeedback.Parent = loginView
+
+    -- 2. SIGN UP VIEW
+    local signupView = Instance.new("Frame")
+    signupView.Size = UDim2.new(1, -60, 1, -70)
+    signupView.Position = UDim2.new(0, 30, 0, 60)
+    signupView.BackgroundTransparency = 1
+    signupView.ZIndex = 112
+    signupView.Visible = false
+    signupView.Parent = rightHost
+
+    local signUserBox, getSignUser = makeInput(signupView, 10, "Choose Username", false)
+    local signPassBox, getSignPass = makeInput(signupView, 58, "Choose Password", true)
+    local signKeyBox, getSignKey = makeInput(signupView, 106, "Discord License Key (SAVIOR-...)", false)
+
+    local registerBtn = Instance.new("TextButton")
+    registerBtn.Size = UDim2.new(1, 0, 0, 36)
+    registerBtn.Position = UDim2.new(0, 0, 0, 160)
+    registerBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    registerBtn.BorderSizePixel = 0
+    registerBtn.Text = "REGISTER & ACTIVATE"
+    registerBtn.Font = Theme.Fonts.Header
+    registerBtn.TextSize = 12
+    registerBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    registerBtn.ZIndex = 113
+    registerBtn.Parent = signupView
+
+    local rbCorner = Instance.new("UICorner")
+    rbCorner.CornerRadius = Theme.Corners.Element
+    rbCorner.Parent = registerBtn
+
+    local signFeedback = Instance.new("TextLabel")
+    signFeedback.Text = ""
+    signFeedback.Font = Theme.Fonts.Body
+    signFeedback.TextSize = 10
+    signFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+    signFeedback.Size = UDim2.new(1, 0, 0, 18)
+    signFeedback.Position = UDim2.new(0, 0, 0, 205)
+    signFeedback.BackgroundTransparency = 1
+    signFeedback.ZIndex = 113
+    signFeedback.Parent = signupView
+
+    -- Switch Tab Logic
+    local function setAuthMode(isLogin)
+        loginView.Visible = isLogin
+        signupView.Visible = not isLogin
+
+        loginFeedback.Text = ""
+        signFeedback.Text = ""
+
+        if isLogin then
+            loginTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            loginTabBtn.BackgroundTransparency = 0
+            loginTabBtn.TextColor3 = Theme.Colors.TextPrimary
+            signupTabBtn.BackgroundTransparency = 1
+            signupTabBtn.TextColor3 = Theme.Colors.TextMuted
+        else
+            signupTabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            signupTabBtn.BackgroundTransparency = 0
+            signupTabBtn.TextColor3 = Theme.Colors.TextPrimary
+            loginTabBtn.BackgroundTransparency = 1
+            loginTabBtn.TextColor3 = Theme.Colors.TextMuted
+        end
+    end
+
+    loginTabBtn.MouseButton1Click:Connect(function() setAuthMode(true) end)
+    signupTabBtn.MouseButton1Click:Connect(function() setAuthMode(false) end)
+
+    -- Sign Up Action
+    registerBtn.MouseButton1Click:Connect(function()
+        local u = string.gsub(getSignUser(), "%s+", "")
+        local p = getSignPass()
+        local k = string.gsub(getSignKey(), "%s+", "")
+
+        if #u < 3 then
+            signFeedback.Text = "Username must be at least 3 characters."
+            signFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+            return
+        end
+        if #p < 4 then
+            signFeedback.Text = "Password must be at least 4 characters."
+            signFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+            return
+        end
+
+        local accounts = AccountDB.getAccounts()
+        if accounts[u] then
+            signFeedback.Text = "Username already exists. Please choose another."
+            signFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+            return
+        end
+
+        registerBtn.Text = "VALIDATING KEY..."
+        task.wait(0.25)
+        local keyValid, keyMsg = AccountDB.verifyDiscordKey(k)
+        if not keyValid then
+            registerBtn.Text = "REGISTER & ACTIVATE"
+            signFeedback.Text = "✕ " .. (keyMsg or "Invalid Discord License Key")
+            signFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+            return
+        end
+
+        -- Save new account to database
+        accounts[u] = {
+            password = p,
+            license_key = k,
+            registered_at = tick()
+        }
+        AccountDB.saveAccounts(accounts)
+
+        signFeedback.Text = "✓ Account created successfully! Please log in."
+        signFeedback.TextColor3 = Color3.fromRGB(255, 255, 255)
+        registerBtn.Text = "SUCCESS"
+
+        task.delay(1.0, function()
+            setAuthMode(true)
+            loginUserBox.Text = u
+            registerBtn.Text = "REGISTER & ACTIVATE"
+        end)
+    end)
+
+    -- Login Action
+    loginBtn.MouseButton1Click:Connect(function()
+        local u = string.gsub(getLoginUser(), "%s+", "")
+        local p = getLoginPass()
+
+        loginBtn.Text = "AUTHENTICATING..."
+        task.wait(0.2)
+
+        local accounts = AccountDB.getAccounts()
+        local acc = accounts[u]
+
+        if not acc or acc.password ~= p then
+            loginBtn.Text = "LOGIN"
+            loginFeedback.Text = "✕ Invalid username or password."
+            loginFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+            return
+        end
+
+        -- Verify attached license key
+        local keyValid, keyMsg = AccountDB.verifyDiscordKey(acc.license_key)
+        if not keyValid then
+            loginBtn.Text = "LOGIN"
+            loginFeedback.Text = "✕ License Key expired or revoked."
+            loginFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
+            return
+        end
+
+        -- Save active session for auto-login next execution
+        AccountDB.saveSession(u)
+
+        loginFeedback.Text = "✓ ACCESS GRANTED"
+        loginFeedback.TextColor3 = Color3.fromRGB(255, 255, 255)
+        loginBtn.Text = "SUCCESS"
+
+        task.wait(0.35)
+        authFrame:Destroy()
+        if onAuthSuccess then onAuthSuccess(u) end
     end)
 end
 
@@ -2382,7 +2647,7 @@ function Hub:BuildPages()
 
     -- Tab 9: Configs
     local cfgPage = self:CreateTab("Configs")
-    local cSec = addSection(cfgPage, "Disk Persistence")
+    local cSec = addSection(cfgPage, "Disk Persistence & Session")
     addButton(cSec, "Save Configuration to Disk", function()
         local canWrite = typeof(writefile) == "function" and typeof(makefolder) == "function"
         if canWrite then
@@ -2413,6 +2678,11 @@ function Hub:BuildPages()
         else
             self:Notify("Notice", "No existing configuration file found", 2.5)
         end
+    end)
+    addButton(cSec, "Log Out & Clear Session", function()
+        AccountDB.clearSession()
+        self:Notify("Session Cleared", "You have been logged out. Re-run script to login.", 3)
+        self:Unload()
     end)
     addButton(cSec, "Unload Savior & Clean Memory", function()
         self:Unload()
