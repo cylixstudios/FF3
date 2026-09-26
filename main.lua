@@ -1,9 +1,12 @@
 --[[
     ====================================================================
-    VORTEX HUB (WIIHUB EDITION) — FOOTBALL FUSION 2 CLIENT INSTRUMENTATION
+    SAVIOR — FOOTBALL FUSION 2 CLIENT INSTRUMENTATION
     Monolithic Loadstring-Ready Distribution.
-    Engineered for ultra-smooth FPS, responsive UI keybinds,
-    comprehensive QB assistance, physics modifiers, and visual tracking.
+    Aesthetic: Monochromatic Translucent Obsidian & Pure White Glass.
+    Features: "Welcome to Savior" Animated Intro Sequence,
+              Ultra-Suction Catching Magnet with Touch Injection,
+              Ballistic Quarterback Mechanics, High-Response Jump Boost,
+              Visual Overlays, and Automatics Engine.
     ====================================================================
 ]]
 
@@ -21,51 +24,55 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 -- Global Cleanup Sentinel
-if getgenv and getgenv().VortexInstance then
+if getgenv and getgenv().SaviorInstance then
     pcall(function()
-        getgenv().VortexInstance:Unload()
+        getgenv().SaviorInstance:Unload()
     end)
 end
 
 -- =====================================================================
--- 1. THEME PALETTE & VISUAL DESIGN TOKENS
+-- 1. THEME PALETTE & VISUAL DESIGN TOKENS (MONOCHROME & GLASS)
 -- =====================================================================
 local Theme = {
     Colors = {
-        Background = Color3.fromRGB(12, 10, 18),
-        Sidebar = Color3.fromRGB(14, 11, 20),
-        Header = Color3.fromRGB(16, 13, 24),
-        Card = Color3.fromRGB(20, 16, 30),
-        CardHover = Color3.fromRGB(26, 21, 40),
-        Border = Color3.fromRGB(36, 28, 54),
-        BorderHover = Color3.fromRGB(70, 52, 105),
+        Background = Color3.fromRGB(10, 10, 10),
+        BackgroundTrans = 0.16,
+        Sidebar = Color3.fromRGB(12, 12, 12),
+        SidebarTrans = 0.20,
+        Header = Color3.fromRGB(14, 14, 14),
+        HeaderTrans = 0.15,
+        Card = Color3.fromRGB(20, 20, 20),
+        CardTrans = 0.28,
+        CardHover = Color3.fromRGB(28, 28, 28),
+        Border = Color3.fromRGB(55, 55, 55),
+        BorderHover = Color3.fromRGB(140, 140, 140),
+        BorderGlow = Color3.fromRGB(255, 255, 255),
 
-        -- WiiHub Neon Violet & Purple Accent Suite
-        Accent = Color3.fromRGB(124, 58, 237),
-        AccentActive = Color3.fromRGB(109, 40, 217),
-        AccentGlow = Color3.fromRGB(168, 85, 247),
-        AccentLight = Color3.fromRGB(192, 132, 252),
-        AccentMuted = Color3.fromRGB(55, 38, 88),
+        -- Monochrome Black & White Suite
+        Accent = Color3.fromRGB(255, 255, 255),
+        AccentActive = Color3.fromRGB(235, 235, 235),
+        AccentMuted = Color3.fromRGB(80, 80, 80),
+        AccentDark = Color3.fromRGB(30, 30, 30),
 
-        TextPrimary = Color3.fromRGB(243, 244, 246),
-        TextSecondary = Color3.fromRGB(196, 181, 253),
-        TextMuted = Color3.fromRGB(140, 130, 165),
-        BreadcrumbMuted = Color3.fromRGB(105, 95, 130),
+        TextPrimary = Color3.fromRGB(255, 255, 255),
+        TextSecondary = Color3.fromRGB(200, 200, 200),
+        TextMuted = Color3.fromRGB(120, 120, 120),
+        BreadcrumbMuted = Color3.fromRGB(90, 90, 90),
 
-        CheckboxOff = Color3.fromRGB(22, 17, 34),
-        CheckboxOn = Color3.fromRGB(124, 58, 237),
-        CheckboxBorder = Color3.fromRGB(65, 50, 95),
+        CheckboxOff = Color3.fromRGB(15, 15, 15),
+        CheckboxOn = Color3.fromRGB(255, 255, 255),
+        CheckboxBorder = Color3.fromRGB(70, 70, 70),
 
-        SliderTrack = Color3.fromRGB(24, 19, 36),
-        SliderFill = Color3.fromRGB(147, 51, 234),
+        SliderTrack = Color3.fromRGB(22, 22, 22),
+        SliderFill = Color3.fromRGB(240, 240, 240),
 
-        Success = Color3.fromRGB(34, 197, 94),
-        Warning = Color3.fromRGB(234, 179, 8),
-        Error = Color3.fromRGB(239, 68, 68),
+        Success = Color3.fromRGB(255, 255, 255),
+        Warning = Color3.fromRGB(180, 180, 180),
+        Error = Color3.fromRGB(255, 60, 60),
 
-        Teammate = Color3.fromRGB(168, 85, 247),
-        Opponent = Color3.fromRGB(244, 63, 94),
-        BallGold = Color3.fromRGB(250, 204, 21)
+        Teammate = Color3.fromRGB(255, 255, 255),
+        Opponent = Color3.fromRGB(130, 130, 130),
+        BallColor = Color3.fromRGB(255, 255, 255)
     },
     Fonts = {
         Header = Enum.Font.GothamBold,
@@ -96,18 +103,19 @@ local function getSafeGuiParent()
 end
 
 -- =====================================================================
--- 2. STATE CONFIGURATION
+-- 2. APPLICATION CONFIGURATION STATE
 -- =====================================================================
 local State = {
     Catching = {
         MagnetEnabled = false,
-        MagnetMode = "Regular", -- "Regular", "Strong", "Legit"
-        MagnetRange = 35,
-        HitboxSize = 8,
-        CatchDistance = 22,
-        CatchAngle = 120,
-        AngleEnhancer = false,
-        AutoCatch = false,
+        MagnetMode = "Blatant", -- "Blatant" (Instant touch), "Regular" (Strong Suction), "Legit" (Smooth pull)
+        MagnetRange = 45,
+        HitboxSize = 12,
+        CatchDistance = 25,
+        CatchAngle = 140,
+        AngleEnhancer = true,
+        AutoCatch = true,
+        TouchInjection = true,
         DiveCatchAssist = true
     },
     QB = {
@@ -117,39 +125,39 @@ local State = {
         AntiWobble = true,
         TargetSelector = "Closest to Mouse", -- "Closest to Mouse", "Nearest Teammate", "Open Receiver"
         LeadPredictionTime = 0.85,
-        BulletPassVelocity = 95,
-        LobPassVelocity = 65,
+        BulletPassVelocity = 100,
+        LobPassVelocity = 70,
         ThrowAssistKey = Enum.KeyCode.Q
     },
     Physics = {
         SpeedEnabled = false,
-        WalkSpeed = 23,
+        WalkSpeed = 26,
         JumpEnabled = false,
-        JumpPower = 65,
+        JumpPower = 75,
+        JumpBoostMultiplier = 1.35,
         InfiniteJump = false,
-        DiveMultiplier = 1.35,
+        DiveMultiplier = 1.6,
         AntiStumble = true
     },
     Defense = {
         TackleExpander = false,
-        TackleRadius = 14,
+        TackleRadius = 16,
         AutoSwat = false,
         CoverageBoost = false
     },
     Trolling = {
         Spinbot = false,
-        SpinSpeed = 25,
-        BallFling = false,
-        NoClip = false
+        SpinSpeed = 30,
+        BallFling = false
     },
     Automatics = {
-        AutoCatch = false,
-        AutoCatchDistance = 14,
+        AutoCatch = true,
+        AutoCatchDistance = 16,
         AutoIntercept = false,
         AutoDive = false,
-        AutoDiveDistance = 22,
+        AutoDiveDistance = 24,
         AutoPick = false,
-        AutoPickDistance = 16
+        AutoPickDistance = 18
     },
     Visuals = {
         BallMaster = true,
@@ -157,7 +165,7 @@ local State = {
         BallTrajectory = true,
         BallLandingMarker = true,
         BallDistance = true,
-        PredictionSteps = 30,
+        PredictionSteps = 35,
 
         PlayerMaster = false,
         PlayerBoxes = true,
@@ -172,11 +180,11 @@ local State = {
     }
 }
 
--- Per-toggle keybind registry
 local KeybindRegistry = {}
+local hasTouchInterest = typeof(firetouchinterest) == "function"
 
 -- =====================================================================
--- 3. ENVIRONMENT & BALL RESOLVER (CACHED & OPTIMIZED)
+-- 3. ENVIRONMENT & BALL RESOLVER (HIGH-PERFORMANCE CACHE)
 -- =====================================================================
 local Environment = {
     _cachedFootball = nil,
@@ -199,7 +207,7 @@ function Environment.getFootball()
         return cached
     end
 
-    if now - Environment._lastFootballSearch < 0.2 then
+    if now - Environment._lastFootballSearch < 0.15 then
         return nil
     end
     Environment._lastFootballSearch = now
@@ -270,7 +278,6 @@ function MathUtils.solveBallisticLaunch(startPos, targetPos, launchSpeed, gravit
     local disc = v4 - gravity * (gravity * (x * x) + 2 * y * v2)
 
     if disc < 0 then
-        -- Target out of theoretical range at this speed, launch at optimal 45 degrees
         local dir = deltaXZ.Unit
         return (dir * math.cos(math.rad(45)) + Vector3.new(0, math.sin(math.rad(45)), 0)) * launchSpeed
     end
@@ -308,7 +315,7 @@ end
 -- 6. CORE LOGIC RUNTIMES
 -- =====================================================================
 
--- 6.1 Catching & Magnet Mechanics
+-- 6.1 Advanced Catching & Magnet Mechanics (with Touch Injection)
 local CatchingSystem = {
     _originalSizes = {},
     _affectedParts = {}
@@ -335,7 +342,6 @@ function CatchingSystem:Step()
     local hPos = hrp.Position
     local dist = (fPos - hPos).Magnitude
 
-    -- Magnet Logic
     if State.Catching.MagnetEnabled and dist <= State.Catching.MagnetRange then
         local inAngle = true
         if not State.Catching.AngleEnhancer then
@@ -346,16 +352,26 @@ function CatchingSystem:Step()
             local catchPart = char:FindFirstChild("CatchLeft") or char:FindFirstChild("CatchRight") or char:FindFirstChild("Right Arm") or hrp
             local targetPos = catchPart.Position
 
-            if State.Catching.MagnetMode == "Regular" then
-                local toHands = (targetPos - fPos).Unit
-                football.AssemblyLinearVelocity = toHands * math.clamp(dist * 3.5, 25, 75)
-            elseif State.Catching.MagnetMode == "Strong" then
+            -- 1. Touch Interest Injection (Instant catch confirmation)
+            if State.Catching.TouchInjection and hasTouchInterest then
+                pcall(function()
+                    firetouchinterest(catchPart, football, 0)
+                    task.wait()
+                    firetouchinterest(catchPart, football, 1)
+                end)
+            end
+
+            -- 2. Physical Pull & Velocity Redirection
+            if State.Catching.MagnetMode == "Blatant" then
                 football.CFrame = CFrame.new(targetPos)
                 football.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            elseif State.Catching.MagnetMode == "Regular" then
+                local toHands = (targetPos - fPos).Unit
+                football.AssemblyLinearVelocity = toHands * math.clamp(dist * 4.2, 35, 95)
             elseif State.Catching.MagnetMode == "Legit" then
                 if dist <= State.Catching.CatchDistance then
                     local assistDir = (targetPos - fPos).Unit
-                    football.AssemblyLinearVelocity = football.AssemblyLinearVelocity:Lerp(assistDir * 35, 0.28)
+                    football.AssemblyLinearVelocity = football.AssemblyLinearVelocity:Lerp(assistDir * 40, 0.35)
                 end
             end
         end
@@ -383,7 +399,7 @@ function CatchingSystem:Step()
         end
     end
 
-    -- Auto Catch Simulation
+    -- Auto Catch Tool Activation
     if State.Catching.AutoCatch and dist <= State.Catching.CatchDistance then
         local tool = char:FindFirstChildOfClass("Tool")
         if tool then
@@ -394,8 +410,7 @@ end
 
 -- 6.2 QB / Passing Assist Mechanics
 local QBSystem = {
-    CurrentTarget = nil,
-    _lockedVelocity = nil
+    CurrentTarget = nil
 }
 
 function QBSystem:GetTargetReceiver()
@@ -428,7 +443,6 @@ function QBSystem:GetTargetReceiver()
                         bestReceiver = teammate
                     end
                 elseif State.QB.TargetSelector == "Open Receiver" then
-                    -- Score based on absence of nearby defenders
                     local defenderDist = math.huge
                     for _, opp in ipairs(Players:GetPlayers()) do
                         if opp ~= LocalPlayer and not Environment.isTeammate(opp) and opp.Character and opp.Character:FindFirstChild("HumanoidRootPart") then
@@ -436,7 +450,7 @@ function QBSystem:GetTargetReceiver()
                             if d < defenderDist then defenderDist = d end
                         end
                     end
-                    local score = -defenderDist -- higher defender distance is better
+                    local score = -defenderDist
                     if score < bestScore then
                         bestScore = score
                         bestReceiver = teammate
@@ -484,24 +498,22 @@ function QBSystem:Step()
     self.CurrentTarget = target
 
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        local launchVel, predictedPos = self:CalculateOptimalPass(target)
+        local launchVel = self:CalculateOptimalPass(target)
         if launchVel and State.QB.AutoAngle then
-            -- Steer camera smoothly towards launch vector
             local lookCFrame = CFrame.lookAt(Camera.CFrame.Position, Camera.CFrame.Position + launchVel)
-            Camera.CFrame = Camera.CFrame:Lerp(lookCFrame, 0.22)
+            Camera.CFrame = Camera.CFrame:Lerp(lookCFrame, 0.25)
         end
     end
 
-    -- Anti-Wobble routine for thrown balls
     if State.QB.AntiWobble then
         local football = Environment.getFootball()
         if football and football:IsA("BasePart") and football.AssemblyLinearVelocity.Magnitude > 15 then
-            football.AssemblyAngularVelocity = football.AssemblyAngularVelocity * Vector3.new(0.05, 1, 0.05)
+            football.AssemblyAngularVelocity = football.AssemblyAngularVelocity * Vector3.new(0.04, 1, 0.04)
         end
     end
 end
 
--- 6.3 Physics & Movement Runtime
+-- 6.3 Physics & High-Response Jump Boost
 local PhysicsSystem = {}
 
 function PhysicsSystem:Step()
@@ -517,10 +529,11 @@ function PhysicsSystem:Step()
 
     -- Custom JumpPower
     if State.Physics.JumpEnabled then
+        local targetPow = State.Physics.JumpPower * State.Physics.JumpBoostMultiplier
         if hum.UseJumpPower then
-            if hum.JumpPower ~= State.Physics.JumpPower then hum.JumpPower = State.Physics.JumpPower end
+            if hum.JumpPower ~= targetPow then hum.JumpPower = targetPow end
         else
-            local height = (State.Physics.JumpPower / 50) * 7.2
+            local height = (targetPow / 50) * 7.2
             if hum.JumpHeight ~= height then hum.JumpHeight = height end
         end
     end
@@ -547,29 +560,29 @@ function AutomaticsSystem:Step()
     local dist = (ballPos - playerPos).Magnitude
     local vel = football.AssemblyLinearVelocity
 
-    -- Autonomous Intercept
-    if State.Automatics.AutoIntercept and dist > 8 and dist <= 55 and vel.Magnitude > 5 then
+    -- Autonomous Intercept Guide
+    if State.Automatics.AutoIntercept and dist > 8 and dist <= 60 and vel.Magnitude > 5 then
         local toBall = (ballPos - playerPos).Unit
-        hrp.AssemblyLinearVelocity = hrp.AssemblyLinearVelocity + (toBall * 2.2)
+        hrp.AssemblyLinearVelocity = hrp.AssemblyLinearVelocity + (toBall * 2.5)
     end
 
-    -- Autonomous Dive
+    -- Autonomous Forward Dive
     if State.Automatics.AutoDive and dist <= State.Automatics.AutoDiveDistance and dist >= 8 then
         local toBall = (ballPos - playerPos).Unit
-        if hrp.CFrame.LookVector:Dot(toBall) > 0.4 and vel.Y < 4 then
+        if hrp.CFrame.LookVector:Dot(toBall) > 0.35 and vel.Y < 4 then
             hum:ChangeState(Enum.HumanoidStateType.Freefall)
-            hrp.AssemblyLinearVelocity = toBall * (38 * State.Physics.DiveMultiplier) + Vector3.new(0, 8, 0)
+            hrp.AssemblyLinearVelocity = toBall * (42 * State.Physics.DiveMultiplier) + Vector3.new(0, 10, 0)
         end
     end
 
     -- Autonomous Dead Ball Pickup
     if State.Automatics.AutoPick and vel.Magnitude < 3.5 and dist <= State.Automatics.AutoPickDistance then
         local toBall = (ballPos - playerPos).Unit
-        hrp.AssemblyLinearVelocity = toBall * 22
+        hrp.AssemblyLinearVelocity = toBall * 24
     end
 end
 
--- 6.5 Visuals (Ball & Player Overlays)
+-- 6.5 Visuals (Monochrome Ball & Player Overlays)
 local VisualsSystem = {
     _ballHighlight = nil,
     _ballLines = {},
@@ -581,27 +594,24 @@ local VisualsSystem = {
 function VisualsSystem:Init()
     if not hasDrawing then return end
 
-    -- Ball trajectory lines
-    for i = 1, 40 do
+    for i = 1, 45 do
         local line = createDrawing("Line")
         if line then
             line.Visible = false
             line.Thickness = 1.5
-            line.Color = Theme.Colors.AccentGlow
+            line.Color = Theme.Colors.Accent
             table.insert(self._ballLines, line)
         end
     end
 
-    -- Ball landing circle
     self._ballCircle = createDrawing("Circle")
     if self._ballCircle then
         self._ballCircle.Visible = false
         self._ballCircle.Radius = 14
         self._ballCircle.Thickness = 1.8
-        self._ballCircle.Color = Theme.Colors.BallGold
+        self._ballCircle.Color = Theme.Colors.Accent
     end
 
-    -- Ball distance tag
     self._ballText = createDrawing("Text")
     if self._ballText then
         self._ballText.Visible = false
@@ -613,7 +623,6 @@ function VisualsSystem:Init()
 end
 
 function VisualsSystem:Render()
-    -- Render Ball
     local football = Environment.getFootball()
     if State.Visuals.BallMaster and football and football:IsA("BasePart") then
         local fPos = football.Position
@@ -621,15 +630,15 @@ function VisualsSystem:Render()
         local char, hrp = Environment.getLocalCharacter()
         local dist = hrp and (fPos - hrp.Position).Magnitude or 0
 
-        -- Highlight
+        -- Ball Highlight
         if State.Visuals.BallHighlight then
             if not self._ballHighlight or self._ballHighlight.Parent ~= football then
                 if self._ballHighlight then self._ballHighlight:Destroy() end
                 local hl = Instance.new("Highlight")
-                hl.Name = "VortexBallHighlight"
-                hl.FillColor = Theme.Colors.AccentLight
-                hl.OutlineColor = Theme.Colors.Accent
-                hl.FillTransparency = 0.4
+                hl.Name = "SaviorBallHighlight"
+                hl.FillColor = Color3.fromRGB(255, 255, 255)
+                hl.OutlineColor = Color3.fromRGB(0, 0, 0)
+                hl.FillTransparency = 0.35
                 hl.OutlineTransparency = 0.1
                 hl.Adornee = football
                 hl.Parent = football
@@ -642,7 +651,7 @@ function VisualsSystem:Render()
 
         -- Distance Tag
         if State.Visuals.BallDistance and self._ballText and onScreen and sPos.Z > 0 then
-            self._ballText.Text = string.format("FOOTBALL [%d studs]", math.floor(dist))
+            self._ballText.Text = string.format("SAVIOR // BALL [%d STUDS]", math.floor(dist))
             self._ballText.Position = Vector2.new(sPos.X, sPos.Y - 22)
             self._ballText.Visible = true
         elseif self._ballText then
@@ -658,7 +667,7 @@ function VisualsSystem:Render()
             local g = Vector3.new(0, -Workspace.Gravity, 0)
             local landingPos = nil
 
-            local maxSteps = math.clamp(State.Visuals.PredictionSteps, 10, 40)
+            local maxSteps = math.clamp(State.Visuals.PredictionSteps, 10, 45)
             for i = 1, maxSteps do
                 local nextP = currentP + (currentV * dt) + (0.5 * g * dt * dt)
                 local ray = Workspace:Raycast(currentP, nextP - currentP)
@@ -760,9 +769,9 @@ function VisualsSystem:Render()
                             entry.Tracer.Visible = true
                         elseif entry.Tracer then entry.Tracer.Visible = false end
 
-                        -- Name Tag
+                        -- Nametag
                         if State.Visuals.PlayerNames and entry.Name then
-                            entry.Name.Text = string.format("%s [%d]", plr.DisplayName, math.floor(sPos.Z))
+                            entry.Name.Text = string.format("%s [%dm]", string.upper(plr.DisplayName), math.floor(sPos.Z))
                             entry.Name.Position = Vector2.new(sPos.X, sPos.Y - (boxHeight / 2) - 15)
                             entry.Name.Color = color
                             entry.Name.Visible = true
@@ -789,7 +798,162 @@ function VisualsSystem:Render()
 end
 
 -- =====================================================================
--- 7. USER INTERFACE ARCHITECTURE (WIIHUB DESIGN PATTERN)
+-- 7. ANIMATED LOAD-UP SCREEN ("WELCOME TO SAVIOR")
+-- =====================================================================
+local function playIntroSequence(parentScreenGui, onFinish)
+    local introFrame = Instance.new("Frame")
+    introFrame.Name = "SaviorIntroScreen"
+    introFrame.Size = UDim2.new(1, 0, 1, 0)
+    introFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    introFrame.BackgroundTransparency = 0.05
+    introFrame.ZIndex = 100
+    introFrame.Parent = parentScreenGui
+
+    local centerCard = Instance.new("Frame")
+    centerCard.Size = UDim2.new(0, 420, 0, 240)
+    centerCard.Position = UDim2.new(0.5, -210, 0.5, -120)
+    centerCard.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+    centerCard.BackgroundTransparency = 0.1
+    centerCard.BorderSizePixel = 0
+    centerCard.ZIndex = 101
+    centerCard.Parent = introFrame
+
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 12)
+    cardCorner.Parent = centerCard
+
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = Color3.fromRGB(255, 255, 255)
+    cardStroke.Transparency = 0.7
+    cardStroke.Thickness = 1.2
+    cardStroke.Parent = centerCard
+
+    -- Stylized Scary Gothic S Emblem ("𝕾")
+    local emblem = Instance.new("TextLabel")
+    emblem.Text = "𝕾"
+    emblem.Font = Enum.Font.SpecialElite
+    emblem.TextSize = 64
+    emblem.TextColor3 = Color3.fromRGB(255, 255, 255)
+    emblem.TextTransparency = 0.1
+    emblem.Size = UDim2.new(1, 0, 0, 70)
+    emblem.Position = UDim2.new(0, 0, 0, 15)
+    emblem.BackgroundTransparency = 1
+    emblem.ZIndex = 102
+    emblem.Parent = centerCard
+
+    -- Sub-glow behind emblem
+    local emblemGlow = Instance.new("TextLabel")
+    emblemGlow.Text = "𝕾"
+    emblemGlow.Font = Enum.Font.SpecialElite
+    emblemGlow.TextSize = 68
+    emblemGlow.TextColor3 = Color3.fromRGB(180, 180, 180)
+    emblemGlow.TextTransparency = 0.6
+    emblemGlow.Size = emblem.Size
+    emblemGlow.Position = emblem.Position
+    emblemGlow.BackgroundTransparency = 1
+    emblemGlow.ZIndex = 101
+    emblemGlow.Parent = centerCard
+
+    -- Title: "WELCOME TO SAVIOR"
+    local title = Instance.new("TextLabel")
+    title.Text = "WELCOME TO SAVIOR"
+    title.Font = Theme.Fonts.Header
+    title.TextSize = 17
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Size = UDim2.new(1, 0, 0, 24)
+    title.Position = UDim2.new(0, 0, 0, 88)
+    title.BackgroundTransparency = 1
+    title.ZIndex = 102
+    title.Parent = centerCard
+
+    -- Subtitle status message
+    local status = Instance.new("TextLabel")
+    status.Text = "CALIBRATING CLIENT INSTRUMENTATION..."
+    status.Font = Theme.Fonts.Body
+    status.TextSize = 11
+    status.TextColor3 = Color3.fromRGB(140, 140, 140)
+    status.Size = UDim2.new(1, 0, 0, 18)
+    status.Position = UDim2.new(0, 0, 0, 116)
+    status.BackgroundTransparency = 1
+    status.ZIndex = 102
+    status.Parent = centerCard
+
+    -- Progress Bar Track
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(0.8, 0, 0, 4)
+    track.Position = UDim2.new(0.1, 0, 0, 155)
+    track.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    track.BorderSizePixel = 0
+    track.ZIndex = 102
+    track.Parent = centerCard
+
+    local tCorner = Instance.new("UICorner")
+    tCorner.CornerRadius = UDim.new(1, 0)
+    tCorner.Parent = track
+
+    -- Progress Fill
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(0, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 103
+    fill.Parent = track
+
+    local fCorner = Instance.new("UICorner")
+    fCorner.CornerRadius = UDim.new(1, 0)
+    fCorner.Parent = fill
+
+    -- Version & Authorization Tag
+    local authTag = Instance.new("TextLabel")
+    authTag.Text = "AUTHORIZED CLIENT // FOOTBALL FUSION 2"
+    authTag.Font = Theme.Fonts.Body
+    authTag.TextSize = 9
+    authTag.TextColor3 = Color3.fromRGB(90, 90, 90)
+    authTag.Size = UDim2.new(1, 0, 0, 16)
+    authTag.Position = UDim2.new(0, 0, 1, -26)
+    authTag.BackgroundTransparency = 1
+    authTag.ZIndex = 102
+    authTag.Parent = centerCard
+
+    -- Pulsing Eerie Animation
+    task.spawn(function()
+        local twFill = TweenService:Create(fill, TweenInfo.new(1.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 1, 0)
+        })
+        twFill:Play()
+
+        task.wait(0.7)
+        status.Text = "INJECTING MAGNET & BALLISTICS ENGINES..."
+
+        task.wait(0.8)
+        status.Text = "READY."
+
+        task.wait(0.4)
+        local fadeTw = TweenService:Create(introFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+            BackgroundTransparency = 1
+        })
+        local fadeCard = TweenService:Create(centerCard, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+            BackgroundTransparency = 1
+        })
+        TweenService:Create(emblem, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+        TweenService:Create(emblemGlow, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+        TweenService:Create(title, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+        TweenService:Create(status, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+        TweenService:Create(track, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(fill, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(authTag, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+        fadeTw:Play()
+        fadeCard:Play()
+
+        fadeTw.Completed:Connect(function()
+            introFrame:Destroy()
+            if onFinish then onFinish() end
+        end)
+    end)
+end
+
+-- =====================================================================
+-- 8. USER INTERFACE ARCHITECTURE (SAVIOR TRANSLUCENT MONOCHROME)
 -- =====================================================================
 local Hub = {
     Visible = true,
@@ -802,24 +966,26 @@ local Hub = {
 
 function Hub:Init()
     local safeParent = getSafeGuiParent()
-    local old = safeParent:FindFirstChild("WiiHub_Vortex")
+    local old = safeParent:FindFirstChild("SaviorHub")
     if old then old:Destroy() end
 
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "WiiHub_Vortex"
+    screenGui.Name = "SaviorHub"
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.Parent = safeParent
     self.ScreenGui = screenGui
 
-    -- Main Hub Frame
+    -- Main Hub Frame (Translucent Black Glass)
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 680, 0, 430)
     mainFrame.Position = UDim2.new(0.5, -340, 0.5, -215)
     mainFrame.BackgroundColor3 = Theme.Colors.Background
+    mainFrame.BackgroundTransparency = Theme.Colors.BackgroundTrans
     mainFrame.BorderSizePixel = 0
     mainFrame.ClipsDescendants = true
+    mainFrame.Visible = false -- Will appear after intro sequence
     mainFrame.Parent = screenGui
     self.MainFrame = mainFrame
 
@@ -829,10 +995,10 @@ function Hub:Init()
 
     local stroke = Instance.new("UIStroke")
     stroke.Color = Theme.Colors.Border
-    stroke.Thickness = 1.4
+    stroke.Thickness = 1.3
     stroke.Parent = mainFrame
 
-    -- Outer Neon Glow
+    -- Outer Glow (Subtle White Rim)
     local outerGlow = Instance.new("Frame")
     outerGlow.Name = "OuterGlow"
     outerGlow.Size = UDim2.new(1, 4, 1, 4)
@@ -842,16 +1008,17 @@ function Hub:Init()
     outerGlow.Parent = mainFrame
 
     local glowStroke = Instance.new("UIStroke")
-    glowStroke.Color = Theme.Colors.Accent
-    glowStroke.Transparency = 0.65
-    glowStroke.Thickness = 2
+    glowStroke.Color = Color3.fromRGB(255, 255, 255)
+    glowStroke.Transparency = 0.85
+    glowStroke.Thickness = 1.5
     glowStroke.Parent = outerGlow
 
-    -- 7.1 Header Bar with Breadcrumbs
+    -- 8.1 Header Bar with Scary S Emblem & Breadcrumbs
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 42)
     header.BackgroundColor3 = Theme.Colors.Header
+    header.BackgroundTransparency = Theme.Colors.HeaderTrans
     header.BorderSizePixel = 0
     header.Parent = mainFrame
 
@@ -863,6 +1030,7 @@ function Hub:Init()
     hCover.Size = UDim2.new(1, 0, 0, 10)
     hCover.Position = UDim2.new(0, 0, 1, -10)
     hCover.BackgroundColor3 = Theme.Colors.Header
+    hCover.BackgroundTransparency = Theme.Colors.HeaderTrans
     hCover.BorderSizePixel = 0
     hCover.Parent = header
 
@@ -873,18 +1041,20 @@ function Hub:Init()
     hSep.BorderSizePixel = 0
     hSep.Parent = header
 
-    -- Left Icon (Cube Emblem)
-    local logoIcon = Instance.new("ImageLabel")
-    logoIcon.Size = UDim2.new(0, 20, 0, 20)
-    logoIcon.Position = UDim2.new(0, 14, 0.5, -10)
+    -- Scary S Emblem in Header
+    local logoIcon = Instance.new("TextLabel")
+    logoIcon.Text = "𝕾"
+    logoIcon.Font = Enum.Font.SpecialElite
+    logoIcon.TextSize = 22
+    logoIcon.TextColor3 = Theme.Colors.TextPrimary
+    logoIcon.Size = UDim2.new(0, 24, 0, 24)
+    logoIcon.Position = UDim2.new(0, 14, 0.5, -12)
     logoIcon.BackgroundTransparency = 1
-    logoIcon.Image = "rbxassetid://7733960981"
-    logoIcon.ImageColor3 = Theme.Colors.AccentLight
     logoIcon.Parent = header
 
     -- Hub Brand Name
     local brandTitle = Instance.new("TextLabel")
-    brandTitle.Text = "WiiHub"
+    brandTitle.Text = "SAVIOR"
     brandTitle.Font = Theme.Fonts.Header
     brandTitle.TextSize = 14
     brandTitle.TextColor3 = Theme.Colors.TextPrimary
@@ -894,10 +1064,10 @@ function Hub:Init()
     brandTitle.BackgroundTransparency = 1
     brandTitle.Parent = header
 
-    -- Breadcrumb Navigation Path: "Projects / WiiHub / <Tab>"
+    -- Breadcrumb Navigation Path: "Projects / Savior / <Tab>"
     local breadcrumbFrame = Instance.new("Frame")
     breadcrumbFrame.Size = UDim2.new(0, 300, 1, 0)
-    breadcrumbFrame.Position = UDim2.new(0, 120, 0, 0)
+    breadcrumbFrame.Position = UDim2.new(0, 115, 0, 0)
     breadcrumbFrame.BackgroundTransparency = 1
     breadcrumbFrame.Parent = header
 
@@ -923,9 +1093,9 @@ function Hub:Init()
 
     makeBreadcrumbText("Projects", Theme.Colors.BreadcrumbMuted, false)
     makeBreadcrumbText("/", Theme.Colors.Border, false)
-    makeBreadcrumbText("WiiHub", Theme.Colors.BreadcrumbMuted, false)
+    makeBreadcrumbText("Savior", Theme.Colors.BreadcrumbMuted, false)
     makeBreadcrumbText("/", Theme.Colors.Border, false)
-    self._activeBreadcrumbLabel = makeBreadcrumbText("Catching", Theme.Colors.AccentLight, true)
+    self._activeBreadcrumbLabel = makeBreadcrumbText("Catching", Theme.Colors.TextPrimary, true)
 
     -- Header Controls: Close and Minimize
     local closeBtn = Instance.new("TextButton")
@@ -955,7 +1125,7 @@ function Hub:Init()
         self:ToggleUI()
     end)
 
-    -- Header Window Dragging (Smooth Input Tracking)
+    -- Window Dragging
     local dragging, dragStart, startPos
     header.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -983,12 +1153,13 @@ function Hub:Init()
     end)
     table.insert(self._connections, dragConn)
 
-    -- 7.2 Left Sidebar Frame
+    -- 8.2 Left Sidebar Frame (Translucent Black)
     local sidebar = Instance.new("Frame")
     sidebar.Name = "Sidebar"
     sidebar.Size = UDim2.new(0, 145, 1, -42)
     sidebar.Position = UDim2.new(0, 0, 0, 42)
     sidebar.BackgroundColor3 = Theme.Colors.Sidebar
+    sidebar.BackgroundTransparency = Theme.Colors.SidebarTrans
     sidebar.BorderSizePixel = 0
     sidebar.Parent = mainFrame
 
@@ -999,7 +1170,6 @@ function Hub:Init()
     sBorder.BorderSizePixel = 0
     sBorder.Parent = sidebar
 
-    -- Sidebar Tab Scroll / List
     local tabContainer = Instance.new("ScrollingFrame")
     tabContainer.Size = UDim2.new(1, 0, 1, -48)
     tabContainer.Position = UDim2.new(0, 0, 0, 0)
@@ -1022,12 +1192,13 @@ function Hub:Init()
     sPad.PaddingRight = UDim.new(0, 8)
     sPad.Parent = tabContainer
 
-    -- 7.3 Sidebar Bottom Profile Footer ("Welcome, <user>")
+    -- 8.3 Sidebar Bottom Profile Footer ("Welcome, <user>")
     local footer = Instance.new("Frame")
     footer.Name = "ProfileFooter"
     footer.Size = UDim2.new(1, 0, 0, 46)
     footer.Position = UDim2.new(0, 0, 1, -46)
     footer.BackgroundColor3 = Theme.Colors.Header
+    footer.BackgroundTransparency = Theme.Colors.HeaderTrans
     footer.BorderSizePixel = 0
     footer.Parent = sidebar
 
@@ -1054,7 +1225,6 @@ function Hub:Init()
     aStroke.Thickness = 1
     aStroke.Parent = avatarImg
 
-    -- Load User Headshot
     task.spawn(function()
         pcall(function()
             local thumb = Players:GetUserThumbnailAsync(
@@ -1077,7 +1247,7 @@ function Hub:Init()
     welcomeLbl.BackgroundTransparency = 1
     welcomeLbl.Parent = footer
 
-    -- 7.4 Main Content Area
+    -- 8.4 Content Container
     local contentContainer = Instance.new("Frame")
     contentContainer.Name = "ContentContainer"
     contentContainer.Size = UDim2.new(1, -145, 1, -42)
@@ -1095,9 +1265,9 @@ function Hub:Init()
             self:ToggleUI()
         end
 
-        -- Check per-toggle keybinds
+        -- Check registered toggle keybinds
         if not gpe and input.UserInputType == Enum.UserInputType.Keyboard then
-            for toggleId, bindData in pairs(KeybindRegistry) do
+            for _, bindData in pairs(KeybindRegistry) do
                 if bindData.Key == input.KeyCode and bindData.ToggleFunc then
                     bindData.ToggleFunc()
                 end
@@ -1106,24 +1276,31 @@ function Hub:Init()
     end)
     table.insert(self._connections, menuKeyConn)
 
-    -- Infinite Jump Listener
+    -- High-Response Jump Boost / Infinite Jump Listener
     local jumpConn = UserInputService.JumpRequest:Connect(function()
-        if not State.Physics.InfiniteJump then return end
+        if not State.Physics.InfiniteJump and not State.Physics.JumpEnabled then return end
         local char, hrp, hum = Environment.getLocalCharacter()
         if char and hrp and hum and hum.Health > 0 then
             hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            local pwr = State.Physics.JumpEnabled and (State.Physics.JumpPower * 0.85) or 50
-            hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, pwr, hrp.AssemblyLinearVelocity.Z)
+            local basePower = State.Physics.JumpEnabled and State.Physics.JumpPower or 50
+            local boostMultiplier = State.Physics.JumpBoostMultiplier or 1.0
+            local finalY = basePower * boostMultiplier
+            hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, finalY, hrp.AssemblyLinearVelocity.Z)
         end
     end)
     table.insert(self._connections, jumpConn)
 
-    -- Watermark & Notifications
     self:CreateWatermark(screenGui)
     self:CreateNotifications(screenGui)
-
-    -- Construct All Tabs
     self:BuildPages()
+
+    -- Play "Welcome to Savior" Animated Load-Up Sequence
+    playIntroSequence(screenGui, function()
+        mainFrame.Visible = true
+        TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {
+            BackgroundTransparency = Theme.Colors.BackgroundTrans
+        }):Play()
+    end)
 end
 
 function Hub:ToggleUI(override)
@@ -1137,10 +1314,11 @@ end
 
 function Hub:CreateWatermark(screenGui)
     local wm = Instance.new("Frame")
-    wm.Name = "WiiHubWatermark"
+    wm.Name = "SaviorWatermark"
     wm.Size = UDim2.new(0, 240, 0, 26)
     wm.Position = UDim2.new(1, -250, 0, 10)
     wm.BackgroundColor3 = Theme.Colors.Header
+    wm.BackgroundTransparency = 0.2
     wm.BorderSizePixel = 0
     wm.Parent = screenGui
 
@@ -1149,9 +1327,8 @@ function Hub:CreateWatermark(screenGui)
     corner.Parent = wm
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Theme.Colors.Accent
+    stroke.Color = Theme.Colors.Border
     stroke.Thickness = 1
-    stroke.Transparency = 0.5
     stroke.Parent = wm
 
     local label = Instance.new("TextLabel")
@@ -1162,7 +1339,7 @@ function Hub:CreateWatermark(screenGui)
     label.TextSize = 11
     label.TextColor3 = Theme.Colors.TextPrimary
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Text = "WiiHub | FPS: -- | Ping: --ms"
+    label.Text = "SAVIOR // FPS: -- | Ping: --ms"
     label.Parent = wm
 
     local frames = 0
@@ -1178,7 +1355,7 @@ function Hub:CreateWatermark(screenGui)
             pcall(function()
                 ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
             end)
-            label.Text = string.format("WiiHub | FPS: %d | Ping: %dms", fps, ping)
+            label.Text = string.format("SAVIOR // FPS: %d | Ping: %dms", fps, ping)
         end
     end)
     table.insert(self._connections, conn)
@@ -1201,11 +1378,12 @@ function Hub:CreateNotifications(screenGui)
     self.NotifContainer = notifContainer
 end
 
-function Hub:Notify(titleText, msgText, duration, statusType)
+function Hub:Notify(titleText, msgText, duration)
     duration = duration or 2.5
     local card = Instance.new("Frame")
     card.Size = UDim2.new(1, 0, 0, 46)
     card.BackgroundColor3 = Theme.Colors.Card
+    card.BackgroundTransparency = 0.15
     card.BorderSizePixel = 0
     card.Position = UDim2.new(1, 20, 0, 0)
     card.Parent = self.NotifContainer
@@ -1215,7 +1393,7 @@ function Hub:Notify(titleText, msgText, duration, statusType)
     corner.Parent = card
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Theme.Colors.Accent
+    stroke.Color = Theme.Colors.Border
     stroke.Thickness = 1
     stroke.Parent = card
 
@@ -1223,7 +1401,7 @@ function Hub:Notify(titleText, msgText, duration, statusType)
     tLbl.Text = titleText
     tLbl.Font = Theme.Fonts.Header
     tLbl.TextSize = 12
-    tLbl.TextColor3 = Theme.Colors.AccentLight
+    tLbl.TextColor3 = Theme.Colors.TextPrimary
     tLbl.TextXAlignment = Enum.TextXAlignment.Left
     tLbl.Size = UDim2.new(1, -12, 0, 16)
     tLbl.Position = UDim2.new(0, 10, 0, 5)
@@ -1234,7 +1412,7 @@ function Hub:Notify(titleText, msgText, duration, statusType)
     mLbl.Text = msgText
     mLbl.Font = Theme.Fonts.Body
     mLbl.TextSize = 10
-    mLbl.TextColor3 = Theme.Colors.TextPrimary
+    mLbl.TextColor3 = Theme.Colors.TextSecondary
     mLbl.TextXAlignment = Enum.TextXAlignment.Left
     mLbl.Size = UDim2.new(1, -12, 0, 16)
     mLbl.Position = UDim2.new(0, 10, 0, 22)
@@ -1251,7 +1429,6 @@ function Hub:Notify(titleText, msgText, duration, statusType)
     end)
 end
 
--- Tab Creator with WiiHub Styling
 function Hub:CreateTab(name)
     local btn = Instance.new("TextButton")
     btn.Name = name .. "TabBtn"
@@ -1277,7 +1454,6 @@ function Hub:CreateTab(name)
     lbl.BackgroundTransparency = 1
     lbl.Parent = btn
 
-    -- Content Page for this Tab
     local page = Instance.new("ScrollingFrame")
     page.Name = name .. "Page"
     page.Size = UDim2.new(1, 0, 1, 0)
@@ -1313,7 +1489,7 @@ function Hub:CreateTab(name)
         page.Visible = active
         if active then
             btn.BackgroundTransparency = 0
-            btn.BackgroundColor3 = Theme.Colors.AccentActive
+            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             lbl.TextColor3 = Theme.Colors.TextPrimary
             lbl.Font = Theme.Fonts.Header
             if self._activeBreadcrumbLabel then
@@ -1345,9 +1521,8 @@ function Hub:CreateTab(name)
 end
 
 -- =====================================================================
--- 8. WIIHUB COMPONENT FACTORY (CHECKBOX WITH KEYBIND, SLIDERS, DROPDOWNS)
+-- 9. COMPONENT FACTORY (MONOCHROME CHECKBOX, KEYBINDS, SLIDERS)
 -- =====================================================================
-
 local function addSection(page, titleText)
     local sec = Instance.new("Frame")
     sec.Size = UDim2.new(1, 0, 0, 0)
@@ -1373,7 +1548,6 @@ local function addSection(page, titleText)
     return sec
 end
 
--- WiiHub Checkbox Row with Integrated Keybind ("Click to Bind")
 local function addToggle(sec, title, defaultState, callback, defaultKey)
     local state = defaultState or false
     local boundKey = defaultKey or nil
@@ -1382,6 +1556,7 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 32)
     row.BackgroundColor3 = Theme.Colors.Card
+    row.BackgroundTransparency = Theme.Colors.CardTrans
     row.BorderSizePixel = 0
     row.Parent = sec
 
@@ -1394,7 +1569,7 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     rStroke.Thickness = 1
     rStroke.Parent = row
 
-    -- Checkbox Button (Left)
+    -- Monochrome Checkbox (Left)
     local checkBtn = Instance.new("TextButton")
     checkBtn.Size = UDim2.new(0, 18, 0, 18)
     checkBtn.Position = UDim2.new(0, 8, 0.5, -9)
@@ -1409,7 +1584,7 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     cbCorner.Parent = checkBtn
 
     local cbStroke = Instance.new("UIStroke")
-    cbStroke.Color = state and Theme.Colors.AccentGlow or Theme.Colors.CheckboxBorder
+    cbStroke.Color = state and Theme.Colors.Accent or Theme.Colors.CheckboxBorder
     cbStroke.Thickness = 1.2
     cbStroke.Parent = checkBtn
 
@@ -1417,13 +1592,12 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     checkmark.Text = "✓"
     checkmark.Font = Theme.Fonts.Header
     checkmark.TextSize = 13
-    checkmark.TextColor3 = Color3.fromRGB(255, 255, 255)
+    checkmark.TextColor3 = Color3.fromRGB(0, 0, 0)
     checkmark.Size = UDim2.new(1, 0, 1, 0)
     checkmark.BackgroundTransparency = 1
     checkmark.Visible = state
     checkmark.Parent = checkBtn
 
-    -- Title Label
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Text = title
     titleLbl.Font = Theme.Fonts.Body
@@ -1435,16 +1609,17 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     titleLbl.BackgroundTransparency = 1
     titleLbl.Parent = row
 
-    -- Keybind Button (Right: "Click to Bind" or "[Key]")
+    -- Keybind Button ("Click to Bind")
     local bindBtn = Instance.new("TextButton")
     bindBtn.Size = UDim2.new(0, 92, 0, 22)
     bindBtn.Position = UDim2.new(1, -98, 0.5, -11)
     bindBtn.BackgroundColor3 = Theme.Colors.Header
+    bindBtn.BackgroundTransparency = 0.3
     bindBtn.BorderSizePixel = 0
     bindBtn.Text = boundKey and ("[" .. boundKey.Name .. "]") or "Click to Bind"
     bindBtn.Font = Theme.Fonts.Body
     bindBtn.TextSize = 10
-    bindBtn.TextColor3 = boundKey and Theme.Colors.AccentLight or Theme.Colors.TextMuted
+    bindBtn.TextColor3 = boundKey and Theme.Colors.Accent or Theme.Colors.TextMuted
     bindBtn.Parent = row
 
     local bCorner = Instance.new("UICorner")
@@ -1458,7 +1633,7 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
 
     local function updateVisuals(anim)
         local targetColor = state and Theme.Colors.CheckboxOn or Theme.Colors.CheckboxOff
-        local strokeColor = state and Theme.Colors.AccentGlow or Theme.Colors.CheckboxBorder
+        local strokeColor = state and Theme.Colors.Accent or Theme.Colors.CheckboxBorder
         checkmark.Visible = state
         if anim then
             TweenService:Create(checkBtn, TweenInfo.new(0.15), { BackgroundColor3 = targetColor }):Play()
@@ -1477,7 +1652,6 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
 
     checkBtn.MouseButton1Click:Connect(toggleState)
 
-    -- Register with Keybind listener
     local toggleId = title .. tostring(tick())
     KeybindRegistry[toggleId] = {
         Key = boundKey,
@@ -1487,7 +1661,7 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     bindBtn.MouseButton1Click:Connect(function()
         listening = true
         bindBtn.Text = "Press Key..."
-        bindBtn.TextColor3 = Theme.Colors.AccentLight
+        bindBtn.TextColor3 = Theme.Colors.Accent
     end)
 
     UserInputService.InputBegan:Connect(function(inp, gpe)
@@ -1499,7 +1673,7 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
             else
                 boundKey = inp.KeyCode
                 bindBtn.Text = "[" .. boundKey.Name .. "]"
-                bindBtn.TextColor3 = Theme.Colors.AccentLight
+                bindBtn.TextColor3 = Theme.Colors.Accent
             end
             KeybindRegistry[toggleId].Key = boundKey
             listening = false
@@ -1516,7 +1690,6 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     }
 end
 
--- Slider Component
 local function addSlider(sec, title, minVal, maxVal, defVal, stepVal, suffix, callback)
     local val = defVal or minVal
     stepVal = stepVal or 1
@@ -1525,6 +1698,7 @@ local function addSlider(sec, title, minVal, maxVal, defVal, stepVal, suffix, ca
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 44)
     row.BackgroundColor3 = Theme.Colors.Card
+    row.BackgroundTransparency = Theme.Colors.CardTrans
     row.BorderSizePixel = 0
     row.Parent = sec
 
@@ -1552,7 +1726,7 @@ local function addSlider(sec, title, minVal, maxVal, defVal, stepVal, suffix, ca
     valLbl.Text = tostring(val) .. suffix
     valLbl.Font = Theme.Fonts.Header
     valLbl.TextSize = 11
-    valLbl.TextColor3 = Theme.Colors.AccentLight
+    valLbl.TextColor3 = Theme.Colors.Accent
     valLbl.TextXAlignment = Enum.TextXAlignment.Right
     valLbl.Size = UDim2.new(0.3, 0, 0, 18)
     valLbl.Position = UDim2.new(0.67, 0, 0, 5)
@@ -1625,7 +1799,6 @@ local function addSlider(sec, title, minVal, maxVal, defVal, stepVal, suffix, ca
     }
 end
 
--- Dropdown Component
 local function addDropdown(sec, title, options, defOpt, callback)
     local selected = defOpt or options[1] or ""
     local open = false
@@ -1633,6 +1806,7 @@ local function addDropdown(sec, title, options, defOpt, callback)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 34)
     row.BackgroundColor3 = Theme.Colors.Card
+    row.BackgroundTransparency = Theme.Colors.CardTrans
     row.BorderSizePixel = 0
     row.Parent = sec
 
@@ -1660,6 +1834,7 @@ local function addDropdown(sec, title, options, defOpt, callback)
     btn.Size = UDim2.new(0.46, 0, 0, 24)
     btn.Position = UDim2.new(0.52, 0, 0.5, -12)
     btn.BackgroundColor3 = Theme.Colors.Header
+    btn.BackgroundTransparency = 0.2
     btn.BorderSizePixel = 0
     btn.Text = ""
     btn.AutoButtonColor = false
@@ -1678,7 +1853,7 @@ local function addDropdown(sec, title, options, defOpt, callback)
     bLbl.Text = selected
     bLbl.Font = Theme.Fonts.Subheader
     bLbl.TextSize = 11
-    bLbl.TextColor3 = Theme.Colors.AccentLight
+    bLbl.TextColor3 = Theme.Colors.Accent
     bLbl.TextXAlignment = Enum.TextXAlignment.Left
     bLbl.Size = UDim2.new(1, -20, 1, 0)
     bLbl.Position = UDim2.new(0, 8, 0, 0)
@@ -1699,6 +1874,7 @@ local function addDropdown(sec, title, options, defOpt, callback)
     list.Size = UDim2.new(1, 0, 0, #options * 24 + 6)
     list.Position = UDim2.new(0, 0, 1, 4)
     list.BackgroundColor3 = Theme.Colors.Header
+    list.BackgroundTransparency = 0.05
     list.BorderSizePixel = 0
     list.Visible = false
     list.ZIndex = 50
@@ -1740,7 +1916,7 @@ local function addDropdown(sec, title, options, defOpt, callback)
         optBtn.Text = opt
         optBtn.Font = Theme.Fonts.Body
         optBtn.TextSize = 11
-        optBtn.TextColor3 = (opt == selected) and Theme.Colors.AccentLight or Theme.Colors.TextSecondary
+        optBtn.TextColor3 = (opt == selected) and Theme.Colors.Accent or Theme.Colors.TextSecondary
         optBtn.ZIndex = 51
         optBtn.Parent = list
 
@@ -1762,6 +1938,7 @@ local function addButton(sec, title, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 32)
     btn.BackgroundColor3 = Theme.Colors.Card
+    btn.BackgroundTransparency = Theme.Colors.CardTrans
     btn.BorderSizePixel = 0
     btn.Text = title
     btn.Font = Theme.Fonts.Subheader
@@ -1779,7 +1956,7 @@ local function addButton(sec, title, callback)
     stroke.Parent = btn
 
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Theme.Colors.AccentActive }):Play()
+        TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(45, 45, 45) }):Play()
     end)
     btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Theme.Colors.Card }):Play()
@@ -1791,87 +1968,80 @@ local function addButton(sec, title, callback)
 end
 
 -- =====================================================================
--- 9. TAB PAGE REGISTRATION (ALL MODULES)
+-- 10. TAB PAGE BUILDER (SAVIOR FEATURE SUITE)
 -- =====================================================================
 function Hub:BuildPages()
     -- Tab 1: Catching
     local catchPage = self:CreateTab("Catching")
-    local cSec1 = addSection(catchPage, "Ball Magnet")
+    local cSec1 = addSection(catchPage, "Ball Magnet Engine")
     addToggle(cSec1, "Ball Magnet", State.Catching.MagnetEnabled, function(v)
         State.Catching.MagnetEnabled = v
         if not v then CatchingSystem:ResetHitboxes() end
     end)
-    addDropdown(cSec1, "Magnet Mode", { "Regular", "Strong", "Legit" }, State.Catching.MagnetMode, function(v)
+    addDropdown(cSec1, "Magnet Mode", { "Blatant", "Regular", "Legit" }, State.Catching.MagnetMode, function(v)
         State.Catching.MagnetMode = v
     end)
-    addSlider(cSec1, "Magnet Range", 5, 80, State.Catching.MagnetRange, 1, " studs", function(v)
+    addSlider(cSec1, "Magnet Range", 5, 100, State.Catching.MagnetRange, 1, " studs", function(v)
         State.Catching.MagnetRange = v
     end)
-    addSlider(cSec1, "Catch Hitbox Size", 2, 30, State.Catching.HitboxSize, 1, " studs", function(v)
+    addSlider(cSec1, "Catch Hitbox Size", 2, 35, State.Catching.HitboxSize, 1, " studs", function(v)
         State.Catching.HitboxSize = v
     end)
-    addSlider(cSec1, "Catch Distance", 5, 50, State.Catching.CatchDistance, 1, " studs", function(v)
+    addSlider(cSec1, "Catch Distance", 5, 60, State.Catching.CatchDistance, 1, " studs", function(v)
         State.Catching.CatchDistance = v
     end)
     addSlider(cSec1, "Catch Angle (FOV)", 30, 180, State.Catching.CatchAngle, 5, "°", function(v)
         State.Catching.CatchAngle = v
     end)
 
-    local cSec2 = addSection(catchPage, "Configuration")
-    addToggle(cSec2, "Angle Enhancer (Omni-Catch)", State.Catching.AngleEnhancer, function(v)
+    local cSec2 = addSection(catchPage, "Advanced Catching Configuration")
+    addToggle(cSec2, "Touch Interest Injection", State.Catching.TouchInjection, function(v)
+        State.Catching.TouchInjection = v
+    end)
+    addToggle(cSec2, "Angle Enhancer (Omni-Directional)", State.Catching.AngleEnhancer, function(v)
         State.Catching.AngleEnhancer = v
     end)
-    addToggle(cSec2, "Automatic Catch", State.Catching.AutoCatch, function(v)
+    addToggle(cSec2, "Automatic Catch (Auto-Click)", State.Catching.AutoCatch, function(v)
         State.Catching.AutoCatch = v
     end)
     addToggle(cSec2, "Dive Catch Assist", State.Catching.DiveCatchAssist, function(v)
         State.Catching.DiveCatchAssist = v
     end)
 
-    -- Tab 2: QB (Quarterback / Passing)
+    -- Tab 2: QB
     local qbPage = self:CreateTab("QB")
-    local qbSec1 = addSection(qbPage, "Aimbot")
+    local qbSec1 = addSection(qbPage, "Passing Assistance")
     addToggle(qbSec1, "QB Aimbot", State.QB.AimbotEnabled, function(v)
         State.QB.AimbotEnabled = v
     end, State.QB.ThrowAssistKey)
-    addDropdown(qbSec1, "Target Selector", { "Closest to Mouse", "Nearest Teammate", "Open Receiver" }, State.QB.TargetSelector, function(v)
+    addDropdown(qbSec1, "Target Receiver Selector", { "Closest to Mouse", "Nearest Teammate", "Open Receiver" }, State.QB.TargetSelector, function(v)
         State.QB.TargetSelector = v
     end)
 
-    local qbSec2 = addSection(qbPage, "Configuration")
+    local qbSec2 = addSection(qbPage, "Trajectory & Ballistics")
     addToggle(qbSec2, "Auto Angle", State.QB.AutoAngle, function(v)
         State.QB.AutoAngle = v
     end)
-    addToggle(qbSec2, "Auto Throw Type", State.QB.AutoThrowType, function(v)
+    addToggle(qbSec2, "Auto Throw Type (Bullet / Lob)", State.QB.AutoThrowType, function(v)
         State.QB.AutoThrowType = v
     end)
     addToggle(qbSec2, "Anti-Wobble / Perfect Spiral", State.QB.AntiWobble, function(v)
         State.QB.AntiWobble = v
     end)
-    addSlider(qbSec2, "Lead Prediction Depth", 0.2, 2.0, State.QB.LeadPredictionTime, 0.05, "s", function(v)
+    addSlider(qbSec2, "Lead Prediction Time", 0.2, 2.0, State.QB.LeadPredictionTime, 0.05, "s", function(v)
         State.QB.LeadPredictionTime = v
     end)
-    addSlider(qbSec2, "Bullet Velocity", 60, 140, State.QB.BulletPassVelocity, 5, " studs/s", function(v)
+    addSlider(qbSec2, "Bullet Velocity", 60, 150, State.QB.BulletPassVelocity, 5, " studs/s", function(v)
         State.QB.BulletPassVelocity = v
     end)
-    addSlider(qbSec2, "Lob Velocity", 40, 95, State.QB.LobPassVelocity, 5, " studs/s", function(v)
+    addSlider(qbSec2, "Lob Velocity", 40, 110, State.QB.LobPassVelocity, 5, " studs/s", function(v)
         State.QB.LobPassVelocity = v
     end)
 
-    -- Tab 3: Physics
+    -- Tab 3: Physics (Jump Boost & Movement)
     local phyPage = self:CreateTab("Physics")
-    local phySec1 = addSection(phyPage, "Movement Modifiers")
-    addToggle(phySec1, "Enable Custom WalkSpeed", State.Physics.SpeedEnabled, function(v)
-        State.Physics.SpeedEnabled = v
-        if not v then
-            local _, _, hum = Environment.getLocalCharacter()
-            if hum then hum.WalkSpeed = 16 end
-        end
-    end)
-    addSlider(phySec1, "WalkSpeed Value", 16, 85, State.Physics.WalkSpeed, 1, " studs/s", function(v)
-        State.Physics.WalkSpeed = v
-    end)
-    addToggle(phySec1, "Enable Custom JumpPower", State.Physics.JumpEnabled, function(v)
+    local phySec1 = addSection(phyPage, "Jump Boost & Air Mobility")
+    addToggle(phySec1, "Custom JumpPower", State.Physics.JumpEnabled, function(v)
         State.Physics.JumpEnabled = v
         if not v then
             local _, _, hum = Environment.getLocalCharacter()
@@ -1880,42 +2050,51 @@ function Hub:BuildPages()
             end
         end
     end)
-    addSlider(phySec1, "JumpPower Value", 50, 160, State.Physics.JumpPower, 5, " pow", function(v)
+    addSlider(phySec1, "JumpPower Value", 50, 180, State.Physics.JumpPower, 5, " pow", function(v)
         State.Physics.JumpPower = v
     end)
-    addToggle(phySec1, "Infinite Jump", State.Physics.InfiniteJump, function(v)
+    addSlider(phySec1, "Jump Boost Impulse", 1.0, 2.5, State.Physics.JumpBoostMultiplier, 0.05, "x", function(v)
+        State.Physics.JumpBoostMultiplier = v
+    end)
+    addToggle(phySec1, "Infinite Air Jump", State.Physics.InfiniteJump, function(v)
         State.Physics.InfiniteJump = v
     end)
-    addSlider(phySec1, "Dive Velocity Multiplier", 1.0, 2.5, State.Physics.DiveMultiplier, 0.1, "x", function(v)
+
+    local phySec2 = addSection(phyPage, "Ground & Dive Movement")
+    addToggle(phySec2, "Custom WalkSpeed", State.Physics.SpeedEnabled, function(v)
+        State.Physics.SpeedEnabled = v
+        if not v then
+            local _, _, hum = Environment.getLocalCharacter()
+            if hum then hum.WalkSpeed = 16 end
+        end
+    end)
+    addSlider(phySec2, "WalkSpeed Value", 16, 90, State.Physics.WalkSpeed, 1, " studs/s", function(v)
+        State.Physics.WalkSpeed = v
+    end)
+    addSlider(phySec2, "Dive Velocity Multiplier", 1.0, 3.0, State.Physics.DiveMultiplier, 0.1, "x", function(v)
         State.Physics.DiveMultiplier = v
     end)
-    addToggle(phySec1, "Anti-Stumble / No Ragdoll", State.Physics.AntiStumble, function(v)
+    addToggle(phySec2, "Anti-Stumble / Anti-Ragdoll", State.Physics.AntiStumble, function(v)
         State.Physics.AntiStumble = v
     end)
 
     -- Tab 4: Defense
     local defPage = self:CreateTab("Defense")
-    local defSec = addSection(defPage, "Tackle & Pass Coverage")
+    local defSec = addSection(defPage, "Tackle & Coverage")
     addToggle(defSec, "Tackle Radius Expander", State.Defense.TackleExpander, function(v)
         State.Defense.TackleExpander = v
     end)
-    addSlider(defSec, "Tackle Distance", 5, 30, State.Defense.TackleRadius, 1, " studs", function(v)
+    addSlider(defSec, "Tackle Distance", 5, 35, State.Defense.TackleRadius, 1, " studs", function(v)
         State.Defense.TackleRadius = v
-    end)
-    addToggle(defSec, "Auto Swat / Deflect Pass", State.Defense.AutoSwat, function(v)
-        State.Defense.AutoSwat = v
-    end)
-    addToggle(defSec, "Coverage Acceleration Assist", State.Defense.CoverageBoost, function(v)
-        State.Defense.CoverageBoost = v
     end)
 
     -- Tab 5: Trolling
     local trolPage = self:CreateTab("Trolling")
-    local trSec = addSection(trolPage, "Miscellaneous & Fun")
+    local trSec = addSection(trolPage, "Miscellaneous")
     addToggle(trSec, "Spinbot", State.Trolling.Spinbot, function(v)
         State.Trolling.Spinbot = v
     end)
-    addSlider(trSec, "Spinbot Yaw Speed", 5, 60, State.Trolling.SpinSpeed, 5, " deg/s", function(v)
+    addSlider(trSec, "Spinbot Yaw Speed", 5, 80, State.Trolling.SpinSpeed, 5, " deg/s", function(v)
         State.Trolling.SpinSpeed = v
     end)
     addToggle(trSec, "Ball Fling Impulse", State.Trolling.BallFling, function(v)
@@ -1924,36 +2103,36 @@ function Hub:BuildPages()
 
     -- Tab 6: Automatics
     local autoPage = self:CreateTab("Automatics")
-    local autSec = addSection(autoPage, "Autonomous Routines")
+    local autSec = addSection(autoPage, "Autonomous Assistance")
     addToggle(autSec, "Autonomous Catch", State.Automatics.AutoCatch, function(v)
         State.Automatics.AutoCatch = v
     end)
-    addSlider(autSec, "Auto Catch Range", 5, 25, State.Automatics.AutoCatchDistance, 1, " studs", function(v)
+    addSlider(autSec, "Auto Catch Range", 5, 30, State.Automatics.AutoCatchDistance, 1, " studs", function(v)
         State.Automatics.AutoCatchDistance = v
     end)
     addToggle(autSec, "Autonomous Intercept Guide", State.Automatics.AutoIntercept, function(v)
         State.Automatics.AutoIntercept = v
     end)
-    addToggle(autSec, "Autonomous Dive", State.Automatics.AutoDive, function(v)
+    addToggle(autSec, "Autonomous Forward Dive", State.Automatics.AutoDive, function(v)
         State.Automatics.AutoDive = v
     end)
-    addSlider(autSec, "Auto Dive Distance", 10, 35, State.Automatics.AutoDiveDistance, 1, " studs", function(v)
+    addSlider(autSec, "Auto Dive Distance", 10, 40, State.Automatics.AutoDiveDistance, 1, " studs", function(v)
         State.Automatics.AutoDiveDistance = v
     end)
     addToggle(autSec, "Autonomous Dead Ball Pickup", State.Automatics.AutoPick, function(v)
         State.Automatics.AutoPick = v
     end)
-    addSlider(autSec, "Auto Pick Distance", 6, 25, State.Automatics.AutoPickDistance, 1, " studs", function(v)
+    addSlider(autSec, "Auto Pick Distance", 6, 30, State.Automatics.AutoPickDistance, 1, " studs", function(v)
         State.Automatics.AutoPickDistance = v
     end)
 
     -- Tab 7: Visuals
     local visPage = self:CreateTab("Visuals")
-    local vSec1 = addSection(visPage, "Football Tracking & Trajectory")
+    local vSec1 = addSection(visPage, "Football Tracking")
     addToggle(vSec1, "Enable Ball Visuals", State.Visuals.BallMaster, function(v)
         State.Visuals.BallMaster = v
     end)
-    addToggle(vSec1, "Ball Highlight (Chams)", State.Visuals.BallHighlight, function(v)
+    addToggle(vSec1, "Ball Highlight (White Chams)", State.Visuals.BallHighlight, function(v)
         State.Visuals.BallHighlight = v
     end)
     addToggle(vSec1, "Ball Trajectory Arc", State.Visuals.BallTrajectory, function(v)
@@ -1973,47 +2152,47 @@ function Hub:BuildPages()
     addDropdown(vSec2, "Filter Mode", { "Opponent", "Team", "Everyone" }, State.Visuals.PlayerFilter, function(v)
         State.Visuals.PlayerFilter = v
     end)
-    addToggle(vSec2, "Player 2D Boxes", State.Visuals.PlayerBoxes, function(v)
+    addToggle(vSec2, "2D Bounding Boxes", State.Visuals.PlayerBoxes, function(v)
         State.Visuals.PlayerBoxes = v
     end)
-    addToggle(vSec2, "Player Tracers", State.Visuals.PlayerTracers, function(v)
+    addToggle(vSec2, "Tracers", State.Visuals.PlayerTracers, function(v)
         State.Visuals.PlayerTracers = v
     end)
-    addToggle(vSec2, "Player Nametags", State.Visuals.PlayerNames, function(v)
+    addToggle(vSec2, "Nametags", State.Visuals.PlayerNames, function(v)
         State.Visuals.PlayerNames = v
     end)
 
     -- Tab 8: Misc
     local miscPage = self:CreateTab("Misc")
-    local mSec = addSection(miscPage, "Interface & Preferences")
+    local mSec = addSection(miscPage, "System Preferences")
     addToggle(mSec, "Show Live Watermark", State.Settings.Watermark, function(v)
         State.Settings.Watermark = v
-        local wm = Hub.ScreenGui and Hub.ScreenGui:FindFirstChild("WiiHubWatermark")
+        local wm = Hub.ScreenGui and Hub.ScreenGui:FindFirstChild("SaviorWatermark")
         if wm then wm.Visible = v end
     end)
 
     -- Tab 9: Configs
     local cfgPage = self:CreateTab("Configs")
-    local cSec = addSection(cfgPage, "Storage & Lifecycle")
+    local cSec = addSection(cfgPage, "Disk Persistence")
     addButton(cSec, "Save Configuration to Disk", function()
         local canWrite = typeof(writefile) == "function" and typeof(makefolder) == "function"
         if canWrite then
             pcall(function()
-                if not (typeof(isfolder) == "function" and isfolder("wiihub_ff2")) then
-                    makefolder("wiihub_ff2")
+                if not (typeof(isfolder) == "function" and isfolder("savior_ff2")) then
+                    makefolder("savior_ff2")
                 end
-                writefile("wiihub_ff2/config.json", HttpService:JSONEncode(State))
+                writefile("savior_ff2/config.json", HttpService:JSONEncode(State))
             end)
-            self:Notify("Config Saved", "Preferences saved to wiihub_ff2/config.json", 2.5)
+            self:Notify("Config Saved", "Settings persisted to savior_ff2/config.json", 2.5)
         else
             self:Notify("Notice", "Executor does not support writefile", 2.5)
         end
     end)
     addButton(cSec, "Load Configuration from Disk", function()
         local canRead = typeof(readfile) == "function" and typeof(isfile) == "function"
-        if canRead and isfile("wiihub_ff2/config.json") then
+        if canRead and isfile("savior_ff2/config.json") then
             pcall(function()
-                local raw = readfile("wiihub_ff2/config.json")
+                local raw = readfile("savior_ff2/config.json")
                 local decoded = HttpService:JSONDecode(raw)
                 for cat, vals in pairs(decoded) do
                     if State[cat] and type(vals) == "table" then
@@ -2026,7 +2205,7 @@ function Hub:BuildPages()
             self:Notify("Notice", "No existing configuration file found", 2.5)
         end
     end)
-    addButton(cSec, "Unload Hub & Clean Memory", function()
+    addButton(cSec, "Unload Savior & Clean Memory", function()
         self:Unload()
     end)
 end
@@ -2063,12 +2242,12 @@ function Hub:Unload()
     end
 
     if getgenv then
-        getgenv().VortexInstance = nil
+        getgenv().SaviorInstance = nil
     end
 end
 
 -- =====================================================================
--- 10. SYSTEM LIFECYCLE EXECUTION
+-- 11. SYSTEM LIFECYCLE EXECUTION
 -- =====================================================================
 VisualsSystem:Init()
 Hub:Init()
@@ -2082,7 +2261,6 @@ local heartbeatConn = RunService.Heartbeat:Connect(function()
         PhysicsSystem:Step()
         AutomaticsSystem:Step()
 
-        -- Spinbot logic
         if State.Trolling.Spinbot then
             local _, hrp = Environment.getLocalCharacter()
             if hrp then
@@ -2091,7 +2269,6 @@ local heartbeatConn = RunService.Heartbeat:Connect(function()
             end
         end
 
-        -- Ball Fling logic
         if State.Trolling.BallFling then
             local football = Environment.getFootball()
             local _, hrp = Environment.getLocalCharacter()
@@ -2100,7 +2277,6 @@ local heartbeatConn = RunService.Heartbeat:Connect(function()
             end
         end
 
-        -- Defense Tackle Expander
         if State.Defense.TackleExpander then
             local char, hrp = Environment.getLocalCharacter()
             if char and hrp then
@@ -2140,9 +2316,6 @@ local plrLeaveConn = Players.PlayerRemoving:Connect(function(plr)
 end)
 table.insert(Hub._connections, plrLeaveConn)
 
--- Save global instance reference
 if getgenv then
-    getgenv().VortexInstance = Hub
+    getgenv().SaviorInstance = Hub
 end
-
-Hub:Notify("WiiHub Loaded", "Press " .. State.Settings.ToggleKey.Name .. " to toggle interface.", 4)
