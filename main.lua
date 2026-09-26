@@ -3,12 +3,23 @@
     SAVIOR — FOOTBALL FUSION 2 CLIENT INSTRUMENTATION
     Monolithic Loadstring-Ready Distribution.
     Aesthetic: Monochromatic Translucent Obsidian & Pure White Glass.
-    Features: "Welcome to Savior" Animated Intro Sequence,
+    Features: Key Authentication Gate with Discord Licensing Integration,
+              Compact Hacker Terminal Loading Sequence ("Welcome to Savior"),
               Ultra-Suction Catching Magnet with Touch Injection,
               Ballistic Quarterback Mechanics, High-Response Jump Boost,
               Visual Overlays, and Automatics Engine.
+    All options defaulted to UNCHECKED.
     ====================================================================
 ]]
+
+-- Configuration & Endpoints
+local KEYAUTH_ENDPOINT = "http://localhost:8080/verify?key=" -- Change to your hosted bot / API endpoint
+local DISCORD_INVITE = "https://discord.gg/saviorhub"
+local MASTER_DEV_KEYS = {
+    ["SAVIOR-DEV-2026"] = true,
+    ["SAVIOR-FREE-PASS"] = true,
+    ["SAVIOR-KEY-VIP"] = true
+}
 
 -- Service Declarations
 local Players = game:GetService("Players")
@@ -48,7 +59,6 @@ local Theme = {
         BorderHover = Color3.fromRGB(140, 140, 140),
         BorderGlow = Color3.fromRGB(255, 255, 255),
 
-        -- Monochrome Black & White Suite
         Accent = Color3.fromRGB(255, 255, 255),
         AccentActive = Color3.fromRGB(235, 235, 235),
         AccentMuted = Color3.fromRGB(80, 80, 80),
@@ -72,12 +82,14 @@ local Theme = {
 
         Teammate = Color3.fromRGB(255, 255, 255),
         Opponent = Color3.fromRGB(130, 130, 130),
-        BallColor = Color3.fromRGB(255, 255, 255)
+        BallColor = Color3.fromRGB(255, 255, 255),
+        TerminalGreen = Color3.fromRGB(235, 235, 235)
     },
     Fonts = {
         Header = Enum.Font.GothamBold,
         Subheader = Enum.Font.GothamMedium,
         Body = Enum.Font.Gotham,
+        Code = Enum.Font.Code,
         Badge = Enum.Font.GothamBlack
     },
     Corners = {
@@ -103,27 +115,27 @@ local function getSafeGuiParent()
 end
 
 -- =====================================================================
--- 2. APPLICATION CONFIGURATION STATE
+-- 2. STATE CONFIGURATION (ALL FEATURES UNCHECKED BY DEFAULT)
 -- =====================================================================
 local State = {
     Catching = {
         MagnetEnabled = false,
-        MagnetMode = "Blatant", -- "Blatant" (Instant touch), "Regular" (Strong Suction), "Legit" (Smooth pull)
-        MagnetRange = 45,
-        HitboxSize = 12,
+        MagnetMode = "Blatant", -- "Blatant", "Regular", "Legit"
+        MagnetRange = 40,
+        HitboxSize = 10,
         CatchDistance = 25,
         CatchAngle = 140,
-        AngleEnhancer = true,
-        AutoCatch = true,
-        TouchInjection = true,
-        DiveCatchAssist = true
+        AngleEnhancer = false,
+        AutoCatch = false,
+        TouchInjection = false,
+        DiveCatchAssist = false
     },
     QB = {
         AimbotEnabled = false,
-        AutoAngle = true,
-        AutoThrowType = true,
-        AntiWobble = true,
-        TargetSelector = "Closest to Mouse", -- "Closest to Mouse", "Nearest Teammate", "Open Receiver"
+        AutoAngle = false,
+        AutoThrowType = false,
+        AntiWobble = false,
+        TargetSelector = "Closest to Mouse",
         LeadPredictionTime = 0.85,
         BulletPassVelocity = 100,
         LobPassVelocity = 70,
@@ -131,17 +143,17 @@ local State = {
     },
     Physics = {
         SpeedEnabled = false,
-        WalkSpeed = 26,
+        WalkSpeed = 24,
         JumpEnabled = false,
-        JumpPower = 75,
+        JumpPower = 70,
         JumpBoostMultiplier = 1.35,
         InfiniteJump = false,
-        DiveMultiplier = 1.6,
-        AntiStumble = true
+        DiveMultiplier = 1.5,
+        AntiStumble = false
     },
     Defense = {
         TackleExpander = false,
-        TackleRadius = 16,
+        TackleRadius = 15,
         AutoSwat = false,
         CoverageBoost = false
     },
@@ -151,7 +163,7 @@ local State = {
         BallFling = false
     },
     Automatics = {
-        AutoCatch = true,
+        AutoCatch = false,
         AutoCatchDistance = 16,
         AutoIntercept = false,
         AutoDive = false,
@@ -160,23 +172,23 @@ local State = {
         AutoPickDistance = 18
     },
     Visuals = {
-        BallMaster = true,
-        BallHighlight = true,
-        BallTrajectory = true,
-        BallLandingMarker = true,
-        BallDistance = true,
+        BallMaster = false,
+        BallHighlight = false,
+        BallTrajectory = false,
+        BallLandingMarker = false,
+        BallDistance = false,
         PredictionSteps = 35,
 
         PlayerMaster = false,
-        PlayerBoxes = true,
+        PlayerBoxes = false,
         PlayerTracers = false,
-        PlayerNames = true,
-        PlayerDistance = true,
-        PlayerFilter = "Opponent" -- "Opponent", "Team", "Everyone"
+        PlayerNames = false,
+        PlayerDistance = false,
+        PlayerFilter = "Opponent"
     },
     Settings = {
         ToggleKey = Enum.KeyCode.RightShift,
-        Watermark = true
+        Watermark = false
     }
 }
 
@@ -315,7 +327,6 @@ end
 -- 6. CORE LOGIC RUNTIMES
 -- =====================================================================
 
--- 6.1 Advanced Catching & Magnet Mechanics (with Touch Injection)
 local CatchingSystem = {
     _originalSizes = {},
     _affectedParts = {}
@@ -352,7 +363,6 @@ function CatchingSystem:Step()
             local catchPart = char:FindFirstChild("CatchLeft") or char:FindFirstChild("CatchRight") or char:FindFirstChild("Right Arm") or hrp
             local targetPos = catchPart.Position
 
-            -- 1. Touch Interest Injection (Instant catch confirmation)
             if State.Catching.TouchInjection and hasTouchInterest then
                 pcall(function()
                     firetouchinterest(catchPart, football, 0)
@@ -361,7 +371,6 @@ function CatchingSystem:Step()
                 end)
             end
 
-            -- 2. Physical Pull & Velocity Redirection
             if State.Catching.MagnetMode == "Blatant" then
                 football.CFrame = CFrame.new(targetPos)
                 football.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -377,7 +386,6 @@ function CatchingSystem:Step()
         end
     end
 
-    -- Hitbox Expansion
     if State.Catching.MagnetEnabled and State.Catching.HitboxSize > 2 then
         local targetParts = {
             char:FindFirstChild("CatchLeft"),
@@ -399,7 +407,6 @@ function CatchingSystem:Step()
         end
     end
 
-    -- Auto Catch Tool Activation
     if State.Catching.AutoCatch and dist <= State.Catching.CatchDistance then
         local tool = char:FindFirstChildOfClass("Tool")
         if tool then
@@ -408,7 +415,6 @@ function CatchingSystem:Step()
     end
 end
 
--- 6.2 QB / Passing Assist Mechanics
 local QBSystem = {
     CurrentTarget = nil
 }
@@ -513,21 +519,18 @@ function QBSystem:Step()
     end
 end
 
--- 6.3 Physics & High-Response Jump Boost
 local PhysicsSystem = {}
 
 function PhysicsSystem:Step()
     local char, hrp, hum = Environment.getLocalCharacter()
     if not (char and hrp and hum) then return end
 
-    -- Custom WalkSpeed with protection
     if State.Physics.SpeedEnabled then
         if hum.WalkSpeed ~= State.Physics.WalkSpeed then
             hum.WalkSpeed = State.Physics.WalkSpeed
         end
     end
 
-    -- Custom JumpPower
     if State.Physics.JumpEnabled then
         local targetPow = State.Physics.JumpPower * State.Physics.JumpBoostMultiplier
         if hum.UseJumpPower then
@@ -538,14 +541,12 @@ function PhysicsSystem:Step()
         end
     end
 
-    -- Anti-Stumble / No Ragdoll
     if State.Physics.AntiStumble then
         if hum.PlatformStand then hum.PlatformStand = false end
         if hum.Sit then hum.Sit = false end
     end
 end
 
--- 6.4 Automatics System
 local AutomaticsSystem = {}
 
 function AutomaticsSystem:Step()
@@ -560,13 +561,11 @@ function AutomaticsSystem:Step()
     local dist = (ballPos - playerPos).Magnitude
     local vel = football.AssemblyLinearVelocity
 
-    -- Autonomous Intercept Guide
     if State.Automatics.AutoIntercept and dist > 8 and dist <= 60 and vel.Magnitude > 5 then
         local toBall = (ballPos - playerPos).Unit
         hrp.AssemblyLinearVelocity = hrp.AssemblyLinearVelocity + (toBall * 2.5)
     end
 
-    -- Autonomous Forward Dive
     if State.Automatics.AutoDive and dist <= State.Automatics.AutoDiveDistance and dist >= 8 then
         local toBall = (ballPos - playerPos).Unit
         if hrp.CFrame.LookVector:Dot(toBall) > 0.35 and vel.Y < 4 then
@@ -575,14 +574,12 @@ function AutomaticsSystem:Step()
         end
     end
 
-    -- Autonomous Dead Ball Pickup
     if State.Automatics.AutoPick and vel.Magnitude < 3.5 and dist <= State.Automatics.AutoPickDistance then
         local toBall = (ballPos - playerPos).Unit
         hrp.AssemblyLinearVelocity = toBall * 24
     end
 end
 
--- 6.5 Visuals (Monochrome Ball & Player Overlays)
 local VisualsSystem = {
     _ballHighlight = nil,
     _ballLines = {},
@@ -630,7 +627,6 @@ function VisualsSystem:Render()
         local char, hrp = Environment.getLocalCharacter()
         local dist = hrp and (fPos - hrp.Position).Magnitude or 0
 
-        -- Ball Highlight
         if State.Visuals.BallHighlight then
             if not self._ballHighlight or self._ballHighlight.Parent ~= football then
                 if self._ballHighlight then self._ballHighlight:Destroy() end
@@ -649,7 +645,6 @@ function VisualsSystem:Render()
             self._ballHighlight.Enabled = false
         end
 
-        -- Distance Tag
         if State.Visuals.BallDistance and self._ballText and onScreen and sPos.Z > 0 then
             self._ballText.Text = string.format("SAVIOR // BALL [%d STUDS]", math.floor(dist))
             self._ballText.Position = Vector2.new(sPos.X, sPos.Y - 22)
@@ -658,7 +653,6 @@ function VisualsSystem:Render()
             self._ballText.Visible = false
         end
 
-        -- Trajectory Arc & Landing Marker
         local vel = football.AssemblyLinearVelocity
         if State.Visuals.BallTrajectory and vel.Magnitude > 4 then
             local currentP = fPos
@@ -720,7 +714,6 @@ function VisualsSystem:Render()
         for _, line in ipairs(self._ballLines) do line.Visible = false end
     end
 
-    -- Render Players
     if State.Visuals.PlayerMaster and hasDrawing then
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
@@ -753,7 +746,6 @@ function VisualsSystem:Render()
                         local boxHeight = math.abs(sPos.Y - headPos.Y) * 2.2
                         local boxWidth = boxHeight * 0.65
 
-                        -- Box
                         if State.Visuals.PlayerBoxes and entry.Box then
                             entry.Box.Size = Vector2.new(boxWidth, boxHeight)
                             entry.Box.Position = Vector2.new(sPos.X - boxWidth / 2, sPos.Y - boxHeight / 2)
@@ -761,7 +753,6 @@ function VisualsSystem:Render()
                             entry.Box.Visible = true
                         elseif entry.Box then entry.Box.Visible = false end
 
-                        -- Tracer
                         if State.Visuals.PlayerTracers and entry.Tracer then
                             entry.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                             entry.Tracer.To = Vector2.new(sPos.X, sPos.Y)
@@ -769,7 +760,6 @@ function VisualsSystem:Render()
                             entry.Tracer.Visible = true
                         elseif entry.Tracer then entry.Tracer.Visible = false end
 
-                        -- Nametag
                         if State.Visuals.PlayerNames and entry.Name then
                             entry.Name.Text = string.format("%s [%dm]", string.upper(plr.DisplayName), math.floor(sPos.Z))
                             entry.Name.Position = Vector2.new(sPos.X, sPos.Y - (boxHeight / 2) - 15)
@@ -798,162 +788,201 @@ function VisualsSystem:Render()
 end
 
 -- =====================================================================
--- 7. ANIMATED LOAD-UP SCREEN ("WELCOME TO SAVIOR")
+-- 7. KEY AUTHENTICATION SYSTEM (LOCAL STORAGE & DISCORD BOT VALIDATION)
 -- =====================================================================
-local function playIntroSequence(parentScreenGui, onFinish)
-    local introFrame = Instance.new("Frame")
-    introFrame.Name = "SaviorIntroScreen"
-    introFrame.Size = UDim2.new(1, 0, 1, 0)
-    introFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    introFrame.BackgroundTransparency = 0.05
-    introFrame.ZIndex = 100
-    introFrame.Parent = parentScreenGui
+local KeyAuth = {
+    Authenticated = false,
+    KeyFile = "savior_ff2/license_key.txt"
+}
 
-    local centerCard = Instance.new("Frame")
-    centerCard.Size = UDim2.new(0, 420, 0, 240)
-    centerCard.Position = UDim2.new(0.5, -210, 0.5, -120)
-    centerCard.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
-    centerCard.BackgroundTransparency = 0.1
-    centerCard.BorderSizePixel = 0
-    centerCard.ZIndex = 101
-    centerCard.Parent = introFrame
+function KeyAuth.getSavedKey()
+    if typeof(readfile) == "function" and typeof(isfile) == "function" and isfile(KeyAuth.KeyFile) then
+        local success, content = pcall(function() return readfile(KeyAuth.KeyFile) end)
+        if success and content then
+            return string.gsub(content, "%s+", "")
+        end
+    end
+    return nil
+end
 
-    local cardCorner = Instance.new("UICorner")
-    cardCorner.CornerRadius = UDim.new(0, 12)
-    cardCorner.Parent = centerCard
+function KeyAuth.saveKey(key)
+    if typeof(writefile) == "function" and typeof(makefolder) == "function" then
+        pcall(function()
+            if typeof(isfolder) == "function" and not isfolder("savior_ff2") then
+                makefolder("savior_ff2")
+            end
+            writefile(KeyAuth.KeyFile, key)
+        end)
+    end
+end
 
-    local cardStroke = Instance.new("UIStroke")
-    cardStroke.Color = Color3.fromRGB(255, 255, 255)
-    cardStroke.Transparency = 0.7
-    cardStroke.Thickness = 1.2
-    cardStroke.Parent = centerCard
+function KeyAuth.validateKey(key)
+    if not key or key == "" then return false, "Empty key provided" end
 
-    -- Stylized Scary Gothic S Emblem ("𝕾")
-    local emblem = Instance.new("TextLabel")
-    emblem.Text = "𝕾"
-    emblem.Font = Enum.Font.SpecialElite
-    emblem.TextSize = 64
-    emblem.TextColor3 = Color3.fromRGB(255, 255, 255)
-    emblem.TextTransparency = 0.1
-    emblem.Size = UDim2.new(1, 0, 0, 70)
-    emblem.Position = UDim2.new(0, 0, 0, 15)
-    emblem.BackgroundTransparency = 1
-    emblem.ZIndex = 102
-    emblem.Parent = centerCard
+    -- 1. Check Master / Dev override keys
+    if MASTER_DEV_KEYS[key] then
+        return true, "Master Developer Authorization"
+    end
 
-    -- Sub-glow behind emblem
-    local emblemGlow = Instance.new("TextLabel")
-    emblemGlow.Text = "𝕾"
-    emblemGlow.Font = Enum.Font.SpecialElite
-    emblemGlow.TextSize = 68
-    emblemGlow.TextColor3 = Color3.fromRGB(180, 180, 180)
-    emblemGlow.TextTransparency = 0.6
-    emblemGlow.Size = emblem.Size
-    emblemGlow.Position = emblem.Position
-    emblemGlow.BackgroundTransparency = 1
-    emblemGlow.ZIndex = 101
-    emblemGlow.Parent = centerCard
+    -- 2. Query Remote Discord Bot API / Webhook Endpoint
+    local canHttp = typeof(game.HttpGet) == "function" or typeof(request) == "function" or typeof(http_request) == "function"
+    if canHttp then
+        local success, resp = pcall(function()
+            local url = KEYAUTH_ENDPOINT .. HttpService:UrlEncode(key)
+            if typeof(game.HttpGet) == "function" then
+                return game:HttpGet(url)
+            elseif typeof(request) == "function" then
+                local res = request({ Url = url, Method = "GET" })
+                return res.Body
+            end
+        end)
 
-    -- Title: "WELCOME TO SAVIOR"
-    local title = Instance.new("TextLabel")
-    title.Text = "WELCOME TO SAVIOR"
-    title.Font = Theme.Fonts.Header
-    title.TextSize = 17
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.Size = UDim2.new(1, 0, 0, 24)
-    title.Position = UDim2.new(0, 0, 0, 88)
-    title.BackgroundTransparency = 1
-    title.ZIndex = 102
-    title.Parent = centerCard
+        if success and resp then
+            local parseOk, data = pcall(function() return HttpService:JSONDecode(resp) end)
+            if parseOk and data and data.valid == true then
+                return true, data.expires_in and ("Valid for " .. tostring(data.expires_in) .. "h") or "Key Activated"
+            elseif parseOk and data and data.valid == false then
+                return false, data.reason or "Invalid or Expired Key"
+            end
+        end
+    end
 
-    -- Subtitle status message
-    local status = Instance.new("TextLabel")
-    status.Text = "CALIBRATING CLIENT INSTRUMENTATION..."
-    status.Font = Theme.Fonts.Body
-    status.TextSize = 11
-    status.TextColor3 = Color3.fromRGB(140, 140, 140)
-    status.Size = UDim2.new(1, 0, 0, 18)
-    status.Position = UDim2.new(0, 0, 0, 116)
-    status.BackgroundTransparency = 1
-    status.ZIndex = 102
-    status.Parent = centerCard
+    -- Fallback format check for offline / simulated verification (SAVIOR-XXXX-XXXX)
+    if string.match(key, "^SAVIOR%-[%w%d]+%-[%w%d]+$") then
+        return true, "Session License Verified"
+    end
 
-    -- Progress Bar Track
-    local track = Instance.new("Frame")
-    track.Size = UDim2.new(0.8, 0, 0, 4)
-    track.Position = UDim2.new(0.1, 0, 0, 155)
-    track.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    track.BorderSizePixel = 0
-    track.ZIndex = 102
-    track.Parent = centerCard
+    return false, "Invalid License Key"
+end
 
-    local tCorner = Instance.new("UICorner")
-    tCorner.CornerRadius = UDim.new(1, 0)
-    tCorner.Parent = track
+-- =====================================================================
+-- 8. COMPACT HACKER LOADING SCREEN ("WELCOME TO SAVIOR")
+-- =====================================================================
+local function playHackerIntro(parentGui, onFinish)
+    local screen = Instance.new("Frame")
+    screen.Name = "SaviorTerminalIntro"
+    screen.Size = UDim2.new(1, 0, 1, 0)
+    screen.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    screen.BackgroundTransparency = 0.08
+    screen.ZIndex = 120
+    screen.Parent = parentGui
 
-    -- Progress Fill
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    fill.BorderSizePixel = 0
-    fill.ZIndex = 103
-    fill.Parent = track
+    -- Compact Terminal Card (320 x 180 studs)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(0, 330, 0, 185)
+    card.Position = UDim2.new(0.5, -165, 0.5, -92)
+    card.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+    card.BackgroundTransparency = 0.12
+    card.BorderSizePixel = 0
+    card.ZIndex = 121
+    card.Parent = screen
 
-    local fCorner = Instance.new("UICorner")
-    fCorner.CornerRadius = UDim.new(1, 0)
-    fCorner.Parent = fill
+    local cCorner = Instance.new("UICorner")
+    cCorner.CornerRadius = UDim.new(0, 8)
+    cCorner.Parent = card
 
-    -- Version & Authorization Tag
-    local authTag = Instance.new("TextLabel")
-    authTag.Text = "AUTHORIZED CLIENT // FOOTBALL FUSION 2"
-    authTag.Font = Theme.Fonts.Body
-    authTag.TextSize = 9
-    authTag.TextColor3 = Color3.fromRGB(90, 90, 90)
-    authTag.Size = UDim2.new(1, 0, 0, 16)
-    authTag.Position = UDim2.new(0, 0, 1, -26)
-    authTag.BackgroundTransparency = 1
-    authTag.ZIndex = 102
-    authTag.Parent = centerCard
+    local cStroke = Instance.new("UIStroke")
+    cStroke.Color = Color3.fromRGB(60, 60, 60)
+    cStroke.Thickness = 1.2
+    cStroke.Parent = card
 
-    -- Pulsing Eerie Animation
+    -- Header Bar
+    local topBar = Instance.new("Frame")
+    topBar.Size = UDim2.new(1, 0, 0, 26)
+    topBar.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+    topBar.BorderSizePixel = 0
+    topBar.ZIndex = 122
+    topBar.Parent = card
+
+    local tbCorner = Instance.new("UICorner")
+    tbCorner.CornerRadius = UDim.new(0, 8)
+    tbCorner.Parent = topBar
+
+    local logo = Instance.new("TextLabel")
+    logo.Text = "𝕾  WELCOME TO SAVIOR"
+    logo.Font = Theme.Fonts.Code
+    logo.TextSize = 11
+    logo.TextColor3 = Color3.fromRGB(240, 240, 240)
+    logo.TextXAlignment = Enum.TextXAlignment.Left
+    logo.Size = UDim2.new(1, -20, 1, 0)
+    logo.Position = UDim2.new(0, 10, 0, 0)
+    logo.BackgroundTransparency = 1
+    logo.ZIndex = 123
+    logo.Parent = topBar
+
+    -- Terminal Console Box
+    local console = Instance.new("Frame")
+    console.Size = UDim2.new(1, -20, 1, -40)
+    console.Position = UDim2.new(0, 10, 0, 32)
+    console.BackgroundColor3 = Color3.fromRGB(4, 4, 4)
+    console.BorderSizePixel = 0
+    console.ZIndex = 122
+    console.Parent = card
+
+    local conCorner = Instance.new("UICorner")
+    conCorner.CornerRadius = UDim.new(0, 4)
+    conCorner.Parent = console
+
+    local conStroke = Instance.new("UIStroke")
+    conStroke.Color = Color3.fromRGB(30, 30, 30)
+    conStroke.Thickness = 1
+    conStroke.Parent = console
+
+    local termLayout = Instance.new("UIListLayout")
+    termLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    termLayout.Padding = UDim.new(0, 3)
+    termLayout.Parent = console
+
+    local termPad = Instance.new("UIPadding")
+    termPad.PaddingTop = UDim.new(0, 6)
+    termPad.PaddingLeft = UDim.new(0, 8)
+    termPad.PaddingRight = UDim.new(0, 8)
+    termPad.Parent = console
+
+    local function addLogLine(text, color)
+        local l = Instance.new("TextLabel")
+        l.Text = text
+        l.Font = Theme.Fonts.Code
+        l.TextSize = 10
+        l.TextColor3 = color or Color3.fromRGB(190, 190, 190)
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        l.Size = UDim2.new(1, 0, 0, 14)
+        l.BackgroundTransparency = 1
+        l.ZIndex = 123
+        l.Parent = console
+        return l
+    end
+
     task.spawn(function()
-        local twFill = TweenService:Create(fill, TweenInfo.new(1.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Size = UDim2.new(1, 0, 1, 0)
-        })
-        twFill:Play()
+        addLogLine("root@savior:~$ ./init_hub --auth", Color3.fromRGB(150, 150, 150))
+        task.wait(0.25)
+        addLogLine("> [MEM] Hooking physical memory vectors...", Color3.fromRGB(220, 220, 220))
+        task.wait(0.3)
+        addLogLine("> [NET] Handshake acknowledged: SAVIOR-OK", Color3.fromRGB(255, 255, 255))
+        task.wait(0.28)
+        addLogLine("> [PHYS] Calibrated jump/suction multipliers", Color3.fromRGB(200, 200, 200))
+        task.wait(0.32)
+        addLogLine("> [AUTH] License status: ACTIVE_USER", Color3.fromRGB(255, 255, 255))
+        task.wait(0.3)
+        addLogLine("> Welcome to Savior. Launching interface...", Color3.fromRGB(255, 255, 255))
 
-        task.wait(0.7)
-        status.Text = "INJECTING MAGNET & BALLISTICS ENGINES..."
-
-        task.wait(0.8)
-        status.Text = "READY."
-
-        task.wait(0.4)
-        local fadeTw = TweenService:Create(introFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+        task.wait(0.5)
+        local fade = TweenService:Create(screen, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
             BackgroundTransparency = 1
         })
-        local fadeCard = TweenService:Create(centerCard, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+        TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
             BackgroundTransparency = 1
-        })
-        TweenService:Create(emblem, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-        TweenService:Create(emblemGlow, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-        TweenService:Create(title, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-        TweenService:Create(status, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-        TweenService:Create(track, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(fill, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(authTag, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-        fadeTw:Play()
-        fadeCard:Play()
-
-        fadeTw.Completed:Connect(function()
-            introFrame:Destroy()
+        }):Play()
+        fade:Play()
+        fade.Completed:Connect(function()
+            screen:Destroy()
             if onFinish then onFinish() end
         end)
     end)
 end
 
 -- =====================================================================
--- 8. USER INTERFACE ARCHITECTURE (SAVIOR TRANSLUCENT MONOCHROME)
+-- 9. USER INTERFACE ARCHITECTURE (SAVIOR TRANSLUCENT MONOCHROME)
 -- =====================================================================
 local Hub = {
     Visible = true,
@@ -985,7 +1014,7 @@ function Hub:Init()
     mainFrame.BackgroundTransparency = Theme.Colors.BackgroundTrans
     mainFrame.BorderSizePixel = 0
     mainFrame.ClipsDescendants = true
-    mainFrame.Visible = false -- Will appear after intro sequence
+    mainFrame.Visible = false
     mainFrame.Parent = screenGui
     self.MainFrame = mainFrame
 
@@ -998,7 +1027,7 @@ function Hub:Init()
     stroke.Thickness = 1.3
     stroke.Parent = mainFrame
 
-    -- Outer Glow (Subtle White Rim)
+    -- Outer Glow
     local outerGlow = Instance.new("Frame")
     outerGlow.Name = "OuterGlow"
     outerGlow.Size = UDim2.new(1, 4, 1, 4)
@@ -1013,7 +1042,7 @@ function Hub:Init()
     glowStroke.Thickness = 1.5
     glowStroke.Parent = outerGlow
 
-    -- 8.1 Header Bar with Scary S Emblem & Breadcrumbs
+    -- Header Bar with Scary S Emblem & Breadcrumbs
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 42)
@@ -1052,7 +1081,6 @@ function Hub:Init()
     logoIcon.BackgroundTransparency = 1
     logoIcon.Parent = header
 
-    -- Hub Brand Name
     local brandTitle = Instance.new("TextLabel")
     brandTitle.Text = "SAVIOR"
     brandTitle.Font = Theme.Fonts.Header
@@ -1064,7 +1092,6 @@ function Hub:Init()
     brandTitle.BackgroundTransparency = 1
     brandTitle.Parent = header
 
-    -- Breadcrumb Navigation Path: "Projects / Savior / <Tab>"
     local breadcrumbFrame = Instance.new("Frame")
     breadcrumbFrame.Size = UDim2.new(0, 300, 1, 0)
     breadcrumbFrame.Position = UDim2.new(0, 115, 0, 0)
@@ -1097,7 +1124,6 @@ function Hub:Init()
     makeBreadcrumbText("/", Theme.Colors.Border, false)
     self._activeBreadcrumbLabel = makeBreadcrumbText("Catching", Theme.Colors.TextPrimary, true)
 
-    -- Header Controls: Close and Minimize
     local closeBtn = Instance.new("TextButton")
     closeBtn.Text = "✕"
     closeBtn.Font = Theme.Fonts.Header
@@ -1118,12 +1144,8 @@ function Hub:Init()
     minBtn.BackgroundTransparency = 1
     minBtn.Parent = header
 
-    closeBtn.MouseButton1Click:Connect(function()
-        self:ToggleUI(false)
-    end)
-    minBtn.MouseButton1Click:Connect(function()
-        self:ToggleUI()
-    end)
+    closeBtn.MouseButton1Click:Connect(function() self:ToggleUI(false) end)
+    minBtn.MouseButton1Click:Connect(function() self:ToggleUI() end)
 
     -- Window Dragging
     local dragging, dragStart, startPos
@@ -1153,7 +1175,7 @@ function Hub:Init()
     end)
     table.insert(self._connections, dragConn)
 
-    -- 8.2 Left Sidebar Frame (Translucent Black)
+    -- Sidebar
     local sidebar = Instance.new("Frame")
     sidebar.Name = "Sidebar"
     sidebar.Size = UDim2.new(0, 145, 1, -42)
@@ -1192,7 +1214,7 @@ function Hub:Init()
     sPad.PaddingRight = UDim.new(0, 8)
     sPad.Parent = tabContainer
 
-    -- 8.3 Sidebar Bottom Profile Footer ("Welcome, <user>")
+    -- Profile Footer
     local footer = Instance.new("Frame")
     footer.Name = "ProfileFooter"
     footer.Size = UDim2.new(1, 0, 0, 46)
@@ -1247,7 +1269,7 @@ function Hub:Init()
     welcomeLbl.BackgroundTransparency = 1
     welcomeLbl.Parent = footer
 
-    -- 8.4 Content Container
+    -- Content Container
     local contentContainer = Instance.new("Frame")
     contentContainer.Name = "ContentContainer"
     contentContainer.Size = UDim2.new(1, -145, 1, -42)
@@ -1258,14 +1280,13 @@ function Hub:Init()
     self.Sidebar = tabContainer
     self.ContentContainer = contentContainer
 
-    -- Keybind Listener for Toggle Key
+    -- Keybind Listener
     local menuKeyConn = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         if input.KeyCode == State.Settings.ToggleKey then
             self:ToggleUI()
         end
 
-        -- Check registered toggle keybinds
         if not gpe and input.UserInputType == Enum.UserInputType.Keyboard then
             for _, bindData in pairs(KeybindRegistry) do
                 if bindData.Key == input.KeyCode and bindData.ToggleFunc then
@@ -1294,12 +1315,201 @@ function Hub:Init()
     self:CreateNotifications(screenGui)
     self:BuildPages()
 
-    -- Play "Welcome to Savior" Animated Load-Up Sequence
-    playIntroSequence(screenGui, function()
-        mainFrame.Visible = true
-        TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {
-            BackgroundTransparency = Theme.Colors.BackgroundTrans
-        }):Play()
+    -- =================================================================
+    -- 9.1 KEY AUTHENTICATION GATE CHECK
+    -- =================================================================
+    local savedKey = KeyAuth.getSavedKey()
+    local isAuthed = false
+    if savedKey then
+        local ok, _ = KeyAuth.validateKey(savedKey)
+        if ok then isAuthed = true end
+    end
+
+    if isAuthed then
+        -- Play hacker terminal screen immediately
+        playHackerIntro(screenGui, function()
+            mainFrame.Visible = true
+        end)
+    else
+        -- Display Key Auth Modal Gate
+        self:ShowKeyAuthGate(screenGui, function()
+            playHackerIntro(screenGui, function()
+                mainFrame.Visible = true
+            end)
+        end)
+    end
+end
+
+function Hub:ShowKeyAuthGate(parentGui, onSuccess)
+    local gateFrame = Instance.new("Frame")
+    gateFrame.Name = "SaviorKeyAuthGate"
+    gateFrame.Size = UDim2.new(1, 0, 1, 0)
+    gateFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    gateFrame.BackgroundTransparency = 0.15
+    gateFrame.ZIndex = 110
+    gateFrame.Parent = parentGui
+
+    local modal = Instance.new("Frame")
+    modal.Size = UDim2.new(0, 360, 0, 230)
+    modal.Position = UDim2.new(0.5, -180, 0.5, -115)
+    modal.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    modal.BackgroundTransparency = 0.12
+    modal.BorderSizePixel = 0
+    modal.ZIndex = 111
+    modal.Parent = gateFrame
+
+    local mCorner = Instance.new("UICorner")
+    mCorner.CornerRadius = UDim.new(0, 8)
+    mCorner.Parent = modal
+
+    local mStroke = Instance.new("UIStroke")
+    mStroke.Color = Color3.fromRGB(70, 70, 70)
+    mStroke.Thickness = 1.3
+    mStroke.Parent = modal
+
+    local sLogo = Instance.new("TextLabel")
+    sLogo.Text = "𝕾"
+    sLogo.Font = Enum.Font.SpecialElite
+    sLogo.TextSize = 36
+    sLogo.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sLogo.Size = UDim2.new(1, 0, 0, 42)
+    sLogo.Position = UDim2.new(0, 0, 0, 12)
+    sLogo.BackgroundTransparency = 1
+    sLogo.ZIndex = 112
+    sLogo.Parent = modal
+
+    local titleLbl = Instance.new("TextLabel")
+    titleLbl.Text = "SAVIOR // LICENSE KEY GATE"
+    titleLbl.Font = Theme.Fonts.Header
+    titleLbl.TextSize = 13
+    titleLbl.TextColor3 = Color3.fromRGB(240, 240, 240)
+    titleLbl.Size = UDim2.new(1, 0, 0, 20)
+    titleLbl.Position = UDim2.new(0, 0, 0, 56)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.ZIndex = 112
+    titleLbl.Parent = modal
+
+    local descLbl = Instance.new("TextLabel")
+    descLbl.Text = "Generate your key in Discord via /genkey or /key add"
+    descLbl.Font = Theme.Fonts.Body
+    descLbl.TextSize = 10
+    descLbl.TextColor3 = Color3.fromRGB(130, 130, 130)
+    descLbl.Size = UDim2.new(1, 0, 0, 16)
+    descLbl.Position = UDim2.new(0, 0, 0, 76)
+    descLbl.BackgroundTransparency = 1
+    descLbl.ZIndex = 112
+    descLbl.Parent = modal
+
+    -- Key Input Box
+    local inputCard = Instance.new("Frame")
+    inputCard.Size = UDim2.new(1, -40, 0, 34)
+    inputCard.Position = UDim2.new(0, 20, 0, 102)
+    inputCard.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    inputCard.BorderSizePixel = 0
+    inputCard.ZIndex = 112
+    inputCard.Parent = modal
+
+    local icCorner = Instance.new("UICorner")
+    icCorner.CornerRadius = UDim.new(0, 5)
+    icCorner.Parent = inputCard
+
+    local icStroke = Instance.new("UIStroke")
+    icStroke.Color = Color3.fromRGB(45, 45, 45)
+    icStroke.Thickness = 1
+    icStroke.Parent = inputCard
+
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(1, -16, 1, 0)
+    textBox.Position = UDim2.new(0, 8, 0, 0)
+    textBox.BackgroundTransparency = 1
+    textBox.Font = Theme.Fonts.Code
+    textBox.TextSize = 11
+    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textBox.PlaceholderText = "Paste License Key Here..."
+    textBox.PlaceholderColor3 = Color3.fromRGB(90, 90, 90)
+    textBox.ClearTextOnFocus = false
+    textBox.Text = KeyAuth.getSavedKey() or ""
+    textBox.ZIndex = 113
+    textBox.Parent = inputCard
+
+    -- Action Buttons (Submit & Get Key)
+    local submitBtn = Instance.new("TextButton")
+    submitBtn.Size = UDim2.new(0.46, 0, 0, 32)
+    submitBtn.Position = UDim2.new(0, 20, 0, 148)
+    submitBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    submitBtn.BorderSizePixel = 0
+    submitBtn.Text = "VERIFY KEY"
+    submitBtn.Font = Theme.Fonts.Header
+    submitBtn.TextSize = 11
+    submitBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    submitBtn.ZIndex = 112
+    submitBtn.Parent = modal
+
+    local sbCorner = Instance.new("UICorner")
+    sbCorner.CornerRadius = UDim.new(0, 5)
+    sbCorner.Parent = submitBtn
+
+    local getBtn = Instance.new("TextButton")
+    getBtn.Size = UDim2.new(0.46, 0, 0, 32)
+    getBtn.Position = UDim2.new(0.54, 0, 0, 148)
+    getBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    getBtn.BorderSizePixel = 0
+    getBtn.Text = "GET KEY (DISCORD)"
+    getBtn.Font = Theme.Fonts.Subheader
+    getBtn.TextSize = 10
+    getBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    getBtn.ZIndex = 112
+    getBtn.Parent = modal
+
+    local gbCorner = Instance.new("UICorner")
+    gbCorner.CornerRadius = UDim.new(0, 5)
+    gbCorner.Parent = getBtn
+
+    local gbStroke = Instance.new("UIStroke")
+    gbStroke.Color = Color3.fromRGB(50, 50, 50)
+    gbStroke.Thickness = 1
+    gbStroke.Parent = getBtn
+
+    local feedbackLbl = Instance.new("TextLabel")
+    feedbackLbl.Text = ""
+    feedbackLbl.Font = Theme.Fonts.Body
+    feedbackLbl.TextSize = 10
+    feedbackLbl.TextColor3 = Color3.fromRGB(240, 60, 60)
+    feedbackLbl.Size = UDim2.new(1, 0, 0, 16)
+    feedbackLbl.Position = UDim2.new(0, 0, 0, 192)
+    feedbackLbl.BackgroundTransparency = 1
+    feedbackLbl.ZIndex = 112
+    feedbackLbl.Parent = modal
+
+    getBtn.MouseButton1Click:Connect(function()
+        if typeof(setclipboard) == "function" then
+            setclipboard(DISCORD_INVITE)
+            getBtn.Text = "COPIED DISCORD!"
+            task.delay(2, function() getBtn.Text = "GET KEY (DISCORD)" end)
+        else
+            feedbackLbl.Text = "Discord: " .. DISCORD_INVITE
+            feedbackLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+    end)
+
+    submitBtn.MouseButton1Click:Connect(function()
+        local inputKey = string.gsub(textBox.Text, "%s+", "")
+        submitBtn.Text = "VERIFYING..."
+        task.wait(0.2)
+        local valid, message = KeyAuth.validateKey(inputKey)
+        if valid then
+            KeyAuth.saveKey(inputKey)
+            feedbackLbl.Text = "✓ ACCESS GRANTED (" .. message .. ")"
+            feedbackLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+            submitBtn.Text = "SUCCESS"
+            task.wait(0.4)
+            gateFrame:Destroy()
+            if onSuccess then onSuccess() end
+        else
+            submitBtn.Text = "VERIFY KEY"
+            feedbackLbl.Text = "✕ " .. (message or "INVALID KEY")
+            feedbackLbl.TextColor3 = Color3.fromRGB(255, 60, 60)
+        end
     end)
 end
 
@@ -1320,6 +1530,7 @@ function Hub:CreateWatermark(screenGui)
     wm.BackgroundColor3 = Theme.Colors.Header
     wm.BackgroundTransparency = 0.2
     wm.BorderSizePixel = 0
+    wm.Visible = State.Settings.Watermark
     wm.Parent = screenGui
 
     local corner = Instance.new("UICorner")
@@ -1521,7 +1732,7 @@ function Hub:CreateTab(name)
 end
 
 -- =====================================================================
--- 9. COMPONENT FACTORY (MONOCHROME CHECKBOX, KEYBINDS, SLIDERS)
+-- 10. COMPONENT FACTORY (MONOCHROME CHECKBOX, KEYBINDS, SLIDERS)
 -- =====================================================================
 local function addSection(page, titleText)
     local sec = Instance.new("Frame")
@@ -1569,7 +1780,6 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     rStroke.Thickness = 1
     rStroke.Parent = row
 
-    -- Monochrome Checkbox (Left)
     local checkBtn = Instance.new("TextButton")
     checkBtn.Size = UDim2.new(0, 18, 0, 18)
     checkBtn.Position = UDim2.new(0, 8, 0.5, -9)
@@ -1609,7 +1819,6 @@ local function addToggle(sec, title, defaultState, callback, defaultKey)
     titleLbl.BackgroundTransparency = 1
     titleLbl.Parent = row
 
-    -- Keybind Button ("Click to Bind")
     local bindBtn = Instance.new("TextButton")
     bindBtn.Size = UDim2.new(0, 92, 0, 22)
     bindBtn.Position = UDim2.new(1, -98, 0.5, -11)
@@ -1968,7 +2177,7 @@ local function addButton(sec, title, callback)
 end
 
 -- =====================================================================
--- 10. TAB PAGE BUILDER (SAVIOR FEATURE SUITE)
+-- 11. TAB PAGE BUILDER (ALL CHECKBOXES INITIALIZED TO FALSE)
 -- =====================================================================
 function Hub:BuildPages()
     -- Tab 1: Catching
@@ -2038,7 +2247,7 @@ function Hub:BuildPages()
         State.QB.LobPassVelocity = v
     end)
 
-    -- Tab 3: Physics (Jump Boost & Movement)
+    -- Tab 3: Physics
     local phyPage = self:CreateTab("Physics")
     local phySec1 = addSection(phyPage, "Jump Boost & Air Mobility")
     addToggle(phySec1, "Custom JumpPower", State.Physics.JumpEnabled, function(v)
@@ -2247,12 +2456,11 @@ function Hub:Unload()
 end
 
 -- =====================================================================
--- 11. SYSTEM LIFECYCLE EXECUTION
+-- 12. SYSTEM LIFECYCLE EXECUTION
 -- =====================================================================
 VisualsSystem:Init()
 Hub:Init()
 
--- Fast Heartbeat Loop (Magnet, QB, Physics, Automatics, Defense, Trolling)
 local spinAngle = 0
 local heartbeatConn = RunService.Heartbeat:Connect(function()
     pcall(function()
@@ -2296,7 +2504,6 @@ local heartbeatConn = RunService.Heartbeat:Connect(function()
 end)
 table.insert(Hub._connections, heartbeatConn)
 
--- Render Loop (Visuals)
 local renderConn = RunService.RenderStepped:Connect(function()
     pcall(function()
         VisualsSystem:Render()
@@ -2304,7 +2511,6 @@ local renderConn = RunService.RenderStepped:Connect(function()
 end)
 table.insert(Hub._connections, renderConn)
 
--- Player Removal Cleanup
 local plrLeaveConn = Players.PlayerRemoving:Connect(function(plr)
     local entry = VisualsSystem._playerDrawings[plr]
     if entry then
