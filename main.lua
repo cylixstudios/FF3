@@ -3,21 +3,21 @@
     SAVIOR — FOOTBALL FUSION 2 CLIENT INSTRUMENTATION
     Monolithic Loadstring-Ready Distribution.
     Aesthetic: Monochromatic Translucent Obsidian & Pure White Glass.
-    Features: 
-      - Full-Sized Hacker Terminal Loading Screen (Matching Menu Bounds)
-      - Integrated Account Database & Authentication System (Login & Sign Up)
-      - Discord-Generated Key Licensing Validation
-      - Session Auto-Login & Persistence
-      - Ultra-Suction Catching Magnet with Touch Injection
-      - Ballistic Quarterback Passing Mechanics
-      - High-Response Jump Boost & Mobility
-      - Visual Overlays & Automatics Engine
+    
+    Complete Engineering Suite:
+      - Menu-Bounds Hacker Boot Loader (680 x 430)
+      - Redesigned Glassmorphic Authentication (Login & Sign Up) with Relog Support
+      - Flyout Side-Popup Dropdowns (No Clipping / No Overlapping)
+      - Corrected Player Nametags (Anchored Cleanly Above Head)
+      - Multi-Ball Detection Engine (Visualizes & Tracks Every Active Ball)
+      - High-Performance Suction Magnet (Blatant, Regular, Legit + Touch Injection)
+      - Quarterback Passing Ballistics, High-Response Jump Boost, Automatics
     All gameplay features defaulted to UNCHECKED.
     ====================================================================
 ]]
 
--- Configuration & Remote Verification Endpoint
-local KEYAUTH_ENDPOINT = "http://localhost:8080/verify?key=" -- Change to your hosted bot API endpoint if using remote verification
+-- Configuration & Endpoints
+local KEYAUTH_ENDPOINT = "http://localhost:8080/verify?key="
 local MASTER_DEV_KEYS = {
     ["SAVIOR-DEV-2026"] = true,
     ["SAVIOR-FREE-PASS"] = true,
@@ -45,46 +45,50 @@ if getgenv and getgenv().SaviorInstance then
 end
 
 -- =====================================================================
--- 1. THEME PALETTE & VISUAL DESIGN TOKENS (MONOCHROME & GLASS)
+-- 1. THEME PALETTE & VISUAL DESIGN TOKENS
 -- =====================================================================
 local Theme = {
     Colors = {
         Background = Color3.fromRGB(10, 10, 10),
-        BackgroundTrans = 0.16,
+        BackgroundTrans = 0.15,
         Sidebar = Color3.fromRGB(12, 12, 12),
-        SidebarTrans = 0.20,
+        SidebarTrans = 0.18,
         Header = Color3.fromRGB(14, 14, 14),
-        HeaderTrans = 0.15,
-        Card = Color3.fromRGB(20, 20, 20),
-        CardTrans = 0.28,
-        CardHover = Color3.fromRGB(28, 28, 28),
+        HeaderTrans = 0.12,
+        Card = Color3.fromRGB(18, 18, 18),
+        CardTrans = 0.25,
+        CardHover = Color3.fromRGB(26, 26, 26),
         Border = Color3.fromRGB(55, 55, 55),
-        BorderHover = Color3.fromRGB(140, 140, 140),
+        BorderHover = Color3.fromRGB(120, 120, 120),
         BorderGlow = Color3.fromRGB(255, 255, 255),
 
         Accent = Color3.fromRGB(255, 255, 255),
         AccentActive = Color3.fromRGB(235, 235, 235),
         AccentMuted = Color3.fromRGB(80, 80, 80),
-        AccentDark = Color3.fromRGB(30, 30, 30),
+        AccentDark = Color3.fromRGB(28, 28, 28),
 
         TextPrimary = Color3.fromRGB(255, 255, 255),
         TextSecondary = Color3.fromRGB(200, 200, 200),
         TextMuted = Color3.fromRGB(120, 120, 120),
         BreadcrumbMuted = Color3.fromRGB(90, 90, 90),
 
-        CheckboxOff = Color3.fromRGB(15, 15, 15),
+        CheckboxOff = Color3.fromRGB(14, 14, 14),
         CheckboxOn = Color3.fromRGB(255, 255, 255),
         CheckboxBorder = Color3.fromRGB(70, 70, 70),
 
         SliderTrack = Color3.fromRGB(22, 22, 22),
         SliderFill = Color3.fromRGB(240, 240, 240),
 
+        InputBase = Color3.fromRGB(16, 16, 16),
+        InputBorder = Color3.fromRGB(48, 48, 48),
+        InputFocusBorder = Color3.fromRGB(220, 220, 220),
+
         Success = Color3.fromRGB(255, 255, 255),
         Warning = Color3.fromRGB(180, 180, 180),
         Error = Color3.fromRGB(255, 60, 60),
 
         Teammate = Color3.fromRGB(255, 255, 255),
-        Opponent = Color3.fromRGB(130, 130, 130),
+        Opponent = Color3.fromRGB(140, 140, 140),
         BallColor = Color3.fromRGB(255, 255, 255)
     },
     Fonts = {
@@ -122,7 +126,7 @@ end
 local State = {
     Catching = {
         MagnetEnabled = false,
-        MagnetMode = "Blatant",
+        MagnetMode = "Blatant", -- "Blatant", "Regular", "Legit"
         MagnetRange = 40,
         HitboxSize = 10,
         CatchDistance = 25,
@@ -186,7 +190,7 @@ local State = {
         PlayerTracers = false,
         PlayerNames = false,
         PlayerDistance = false,
-        PlayerFilter = "Opponent"
+        PlayerFilter = "Opponent" -- "Opponent", "Team", "Everyone"
     },
     Settings = {
         ToggleKey = Enum.KeyCode.RightShift,
@@ -198,11 +202,11 @@ local KeybindRegistry = {}
 local hasTouchInterest = typeof(firetouchinterest) == "function"
 
 -- =====================================================================
--- 3. ENVIRONMENT & BALL RESOLVER (HIGH-PERFORMANCE CACHE)
+-- 3. MULTI-BALL ENVIRONMENT & RESOLVER (TRACKS EVERY ACTIVE BALL)
 -- =====================================================================
 local Environment = {
-    _cachedFootball = nil,
-    _lastFootballSearch = 0
+    _trackedBalls = {},
+    _lastScan = 0
 }
 
 function Environment.getLocalCharacter()
@@ -214,42 +218,56 @@ function Environment.getLocalCharacter()
     return char, hrp, hum
 end
 
-function Environment.getFootball()
+function Environment.isFootball(inst)
+    if not (inst and inst:IsA("BasePart")) then return false end
+    local name = inst.Name:lower()
+    return name == "football" or string.find(name, "ball") ~= nil
+end
+
+function Environment.getAllFootballs()
     local now = tick()
-    local cached = Environment._cachedFootball
-    if cached and cached.Parent and cached:IsDescendantOf(Workspace) then
-        return cached
+    if now - Environment._lastScan > 0.25 then
+        Environment._lastScan = now
+        local list = {}
+        for _, inst in ipairs(Workspace:GetDescendants()) do
+            if Environment.isFootball(inst) and inst:IsDescendantOf(Workspace) then
+                table.insert(list, inst)
+            end
+        end
+        Environment._trackedBalls = list
     end
 
-    if now - Environment._lastFootballSearch < 0.15 then
-        return nil
-    end
-    Environment._lastFootballSearch = now
-
-    local found = Workspace:FindFirstChild("Football", true)
-    if found and found:IsA("BasePart") then
-        Environment._cachedFootball = found
-        return found
-    end
-
-    for _, inst in ipairs(Workspace:GetChildren()) do
-        if inst:IsA("BasePart") and (string.find(inst.Name:lower(), "ball") or inst.Name == "Football") then
-            Environment._cachedFootball = inst
-            return inst
+    -- Clean invalidated parts
+    local active = {}
+    for _, ball in ipairs(Environment._trackedBalls) do
+        if ball and ball.Parent and ball:IsDescendantOf(Workspace) then
+            table.insert(active, ball)
         end
     end
-    return nil
+    Environment._trackedBalls = active
+    return active
+end
+
+function Environment.getClosestFootball()
+    local balls = Environment.getAllFootballs()
+    local char, hrp = Environment.getLocalCharacter()
+    if not (char and hrp and #balls > 0) then return nil end
+
+    local closest = nil
+    local shortestDist = math.huge
+    for _, ball in ipairs(balls) do
+        local d = (ball.Position - hrp.Position).Magnitude
+        if d < shortestDist then
+            shortestDist = d
+            closest = ball
+        end
+    end
+    return closest, shortestDist
 end
 
 Workspace.DescendantAdded:Connect(function(desc)
-    if desc:IsA("BasePart") and (desc.Name == "Football" or string.find(desc.Name:lower(), "football")) then
-        Environment._cachedFootball = desc
-    end
-end)
-
-Workspace.DescendantRemoving:Connect(function(desc)
-    if desc == Environment._cachedFootball then
-        Environment._cachedFootball = nil
+    if Environment.isFootball(desc) then
+        table.insert(Environment._trackedBalls, desc)
     end
 end)
 
@@ -283,9 +301,7 @@ function MathUtils.solveBallisticLaunch(startPos, targetPos, launchSpeed, gravit
     local x = deltaXZ.Magnitude
     local y = delta.Y
 
-    if x < 1 then
-        return Vector3.new(0, launchSpeed, 0)
-    end
+    if x < 1 then return Vector3.new(0, launchSpeed, 0) end
 
     local v2 = launchSpeed * launchSpeed
     local v4 = v2 * v2
@@ -319,9 +335,7 @@ local hasDrawing = typeof(Drawing) == "table" and typeof(Drawing.new) == "functi
 
 local function createDrawing(objType)
     if not hasDrawing then return nil end
-    local success, obj = pcall(function()
-        return Drawing.new(objType)
-    end)
+    local success, obj = pcall(function() return Drawing.new(objType) end)
     return success and obj or nil
 end
 
@@ -329,6 +343,7 @@ end
 -- 6. CORE LOGIC RUNTIMES
 -- =====================================================================
 
+-- 6.1 Advanced Catching Magnet (Multi-Ball Target Resolution + Touch Injection)
 local CatchingSystem = {
     _originalSizes = {},
     _affectedParts = {}
@@ -348,46 +363,7 @@ function CatchingSystem:Step()
     local char, hrp, hum = Environment.getLocalCharacter()
     if not (char and hrp and hum) then return end
 
-    local football = Environment.getFootball()
-    if not (football and football:IsA("BasePart")) then return end
-
-    local fPos = football.Position
-    local hPos = hrp.Position
-    local dist = (fPos - hPos).Magnitude
-
-    if State.Catching.MagnetEnabled and dist <= State.Catching.MagnetRange then
-        local inAngle = true
-        if not State.Catching.AngleEnhancer then
-            inAngle = MathUtils.isInAngle(hrp, fPos, State.Catching.CatchAngle)
-        end
-
-        if inAngle then
-            local catchPart = char:FindFirstChild("CatchLeft") or char:FindFirstChild("CatchRight") or char:FindFirstChild("Right Arm") or hrp
-            local targetPos = catchPart.Position
-
-            if State.Catching.TouchInjection and hasTouchInterest then
-                pcall(function()
-                    firetouchinterest(catchPart, football, 0)
-                    task.wait()
-                    firetouchinterest(catchPart, football, 1)
-                end)
-            end
-
-            if State.Catching.MagnetMode == "Blatant" then
-                football.CFrame = CFrame.new(targetPos)
-                football.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            elseif State.Catching.MagnetMode == "Regular" then
-                local toHands = (targetPos - fPos).Unit
-                football.AssemblyLinearVelocity = toHands * math.clamp(dist * 4.2, 35, 95)
-            elseif State.Catching.MagnetMode == "Legit" then
-                if dist <= State.Catching.CatchDistance then
-                    local assistDir = (targetPos - fPos).Unit
-                    football.AssemblyLinearVelocity = football.AssemblyLinearVelocity:Lerp(assistDir * 40, 0.35)
-                end
-            end
-        end
-    end
-
+    -- Hitbox Expansion
     if State.Catching.MagnetEnabled and State.Catching.HitboxSize > 2 then
         local targetParts = {
             char:FindFirstChild("CatchLeft"),
@@ -409,14 +385,61 @@ function CatchingSystem:Step()
         end
     end
 
-    if State.Catching.AutoCatch and dist <= State.Catching.CatchDistance then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            pcall(function() tool:Activate() end)
+    if not State.Catching.MagnetEnabled then return end
+
+    -- Iterate all active footballs in range
+    local balls = Environment.getAllFootballs()
+    for _, football in ipairs(balls) do
+        local fPos = football.Position
+        local hPos = hrp.Position
+        local dist = (fPos - hPos).Magnitude
+
+        if dist <= State.Catching.MagnetRange then
+            local inAngle = true
+            if not State.Catching.AngleEnhancer then
+                inAngle = MathUtils.isInAngle(hrp, fPos, State.Catching.CatchAngle)
+            end
+
+            if inAngle then
+                local catchPart = char:FindFirstChild("CatchLeft") or char:FindFirstChild("CatchRight") or char:FindFirstChild("Right Arm") or hrp
+                local targetPos = catchPart.Position
+
+                -- Touch Interest Injection (Instant catch register)
+                if State.Catching.TouchInjection and hasTouchInterest then
+                    pcall(function()
+                        firetouchinterest(catchPart, football, 0)
+                        task.wait()
+                        firetouchinterest(catchPart, football, 1)
+                    end)
+                end
+
+                -- Suction Physics
+                if State.Catching.MagnetMode == "Blatant" then
+                    football.CFrame = CFrame.new(targetPos)
+                    football.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                elseif State.Catching.MagnetMode == "Regular" then
+                    local toHands = (targetPos - fPos).Unit
+                    football.AssemblyLinearVelocity = toHands * math.clamp(dist * 4.8, 40, 110)
+                elseif State.Catching.MagnetMode == "Legit" then
+                    if dist <= State.Catching.CatchDistance then
+                        local assistDir = (targetPos - fPos).Unit
+                        football.AssemblyLinearVelocity = football.AssemblyLinearVelocity:Lerp(assistDir * 42, 0.38)
+                    end
+                end
+
+                -- Auto Catch Tool Activation
+                if State.Catching.AutoCatch and dist <= State.Catching.CatchDistance then
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if tool then
+                        pcall(function() tool:Activate() end)
+                    end
+                end
+            end
         end
     end
 end
 
+-- 6.2 QB / Passing Assist Mechanics
 local QBSystem = {
     CurrentTarget = nil
 }
@@ -514,13 +537,14 @@ function QBSystem:Step()
     end
 
     if State.QB.AntiWobble then
-        local football = Environment.getFootball()
-        if football and football:IsA("BasePart") and football.AssemblyLinearVelocity.Magnitude > 15 then
-            football.AssemblyAngularVelocity = football.AssemblyAngularVelocity * Vector3.new(0.04, 1, 0.04)
+        local ball = Environment.getClosestFootball()
+        if ball and ball.AssemblyLinearVelocity.Magnitude > 15 then
+            ball.AssemblyAngularVelocity = ball.AssemblyAngularVelocity * Vector3.new(0.04, 1, 0.04)
         end
     end
 end
 
+-- 6.3 Physics & Jump Boost
 local PhysicsSystem = {}
 
 function PhysicsSystem:Step()
@@ -549,13 +573,14 @@ function PhysicsSystem:Step()
     end
 end
 
+-- 6.4 Automatics System
 local AutomaticsSystem = {}
 
 function AutomaticsSystem:Step()
     local char, hrp, hum = Environment.getLocalCharacter()
     if not (char and hrp and hum) then return end
 
-    local football = Environment.getFootball()
+    local football = Environment.getClosestFootball()
     if not (football and football:IsA("BasePart")) then return end
 
     local ballPos = football.Position
@@ -582,140 +607,160 @@ function AutomaticsSystem:Step()
     end
 end
 
+-- 6.5 Visuals (Multi-Ball Overlays + Accurately Positioned Player Nametags)
 local VisualsSystem = {
-    _ballHighlight = nil,
-    _ballLines = {},
-    _ballCircle = nil,
-    _ballText = nil,
+    _ballDrawings = {},
     _playerDrawings = {}
 }
 
-function VisualsSystem:Init()
-    if not hasDrawing then return end
-
-    for i = 1, 45 do
-        local line = createDrawing("Line")
-        if line then
-            line.Visible = false
-            line.Thickness = 1.5
-            line.Color = Theme.Colors.Accent
-            table.insert(self._ballLines, line)
+function VisualsSystem:GetBallDrawings(ball)
+    local entry = self._ballDrawings[ball]
+    if not entry and hasDrawing then
+        local lines = {}
+        for i = 1, 40 do
+            local line = createDrawing("Line")
+            if line then
+                line.Visible = false
+                line.Thickness = 1.5
+                line.Color = Theme.Colors.Accent
+                table.insert(lines, line)
+            end
         end
-    end
+        local circle = createDrawing("Circle")
+        if circle then
+            circle.Visible = false
+            circle.Radius = 14
+            circle.Thickness = 1.8
+            circle.Color = Theme.Colors.Accent
+        end
+        local text = createDrawing("Text")
+        if text then
+            text.Visible = false
+            text.Size = 12
+            text.Center = true
+            text.Outline = true
+            text.Color = Theme.Colors.TextPrimary
+        end
 
-    self._ballCircle = createDrawing("Circle")
-    if self._ballCircle then
-        self._ballCircle.Visible = false
-        self._ballCircle.Radius = 14
-        self._ballCircle.Thickness = 1.8
-        self._ballCircle.Color = Theme.Colors.Accent
+        entry = {
+            Lines = lines,
+            Circle = circle,
+            Text = text,
+            Highlight = nil
+        }
+        self._ballDrawings[ball] = entry
     end
-
-    self._ballText = createDrawing("Text")
-    if self._ballText then
-        self._ballText.Visible = false
-        self._ballText.Size = 12
-        self._ballText.Center = true
-        self._ballText.Outline = true
-        self._ballText.Color = Theme.Colors.TextPrimary
-    end
+    return entry
 end
 
 function VisualsSystem:Render()
-    local football = Environment.getFootball()
-    if State.Visuals.BallMaster and football and football:IsA("BasePart") then
-        local fPos = football.Position
-        local sPos, onScreen = Camera:WorldToViewportPoint(fPos)
-        local char, hrp = Environment.getLocalCharacter()
-        local dist = hrp and (fPos - hrp.Position).Magnitude or 0
+    -- 1. Multi-Ball Visuals (Render Every Football in Workspace)
+    local balls = Environment.getAllFootballs()
+    local char, hrp = Environment.getLocalCharacter()
 
-        if State.Visuals.BallHighlight then
-            if not self._ballHighlight or self._ballHighlight.Parent ~= football then
-                if self._ballHighlight then self._ballHighlight:Destroy() end
-                local hl = Instance.new("Highlight")
-                hl.Name = "SaviorBallHighlight"
-                hl.FillColor = Color3.fromRGB(255, 255, 255)
-                hl.OutlineColor = Color3.fromRGB(0, 0, 0)
-                hl.FillTransparency = 0.35
-                hl.OutlineTransparency = 0.1
-                hl.Adornee = football
-                hl.Parent = football
-                self._ballHighlight = hl
-            end
-            self._ballHighlight.Enabled = true
-        elseif self._ballHighlight then
-            self._ballHighlight.Enabled = false
-        end
+    if State.Visuals.BallMaster then
+        for _, football in ipairs(balls) do
+            local entry = self:GetBallDrawings(football)
+            if entry then
+                local fPos = football.Position
+                local sPos, onScreen = Camera:WorldToViewportPoint(fPos)
+                local dist = hrp and (fPos - hrp.Position).Magnitude or 0
 
-        if State.Visuals.BallDistance and self._ballText and onScreen and sPos.Z > 0 then
-            self._ballText.Text = string.format("SAVIOR // BALL [%d STUDS]", math.floor(dist))
-            self._ballText.Position = Vector2.new(sPos.X, sPos.Y - 22)
-            self._ballText.Visible = true
-        elseif self._ballText then
-            self._ballText.Visible = false
-        end
-
-        local vel = football.AssemblyLinearVelocity
-        if State.Visuals.BallTrajectory and vel.Magnitude > 4 then
-            local currentP = fPos
-            local currentV = vel
-            local dt = 0.05
-            local g = Vector3.new(0, -Workspace.Gravity, 0)
-            local landingPos = nil
-
-            local maxSteps = math.clamp(State.Visuals.PredictionSteps, 10, 45)
-            for i = 1, maxSteps do
-                local nextP = currentP + (currentV * dt) + (0.5 * g * dt * dt)
-                local ray = Workspace:Raycast(currentP, nextP - currentP)
-
-                local p1, v1 = Camera:WorldToViewportPoint(currentP)
-                local p2, v2 = Camera:WorldToViewportPoint(ray and ray.Position or nextP)
-
-                local line = self._ballLines[i]
-                if line then
-                    if v1 and v2 and p1.Z > 0 and p2.Z > 0 then
-                        line.From = Vector2.new(p1.X, p1.Y)
-                        line.To = Vector2.new(p2.X, p2.Y)
-                        line.Visible = true
-                    else
-                        line.Visible = false
+                -- Highlight
+                if State.Visuals.BallHighlight then
+                    if not entry.Highlight or entry.Highlight.Parent ~= football then
+                        if entry.Highlight then entry.Highlight:Destroy() end
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "SaviorBallHighlight"
+                        hl.FillColor = Color3.fromRGB(255, 255, 255)
+                        hl.OutlineColor = Color3.fromRGB(0, 0, 0)
+                        hl.FillTransparency = 0.35
+                        hl.OutlineTransparency = 0.1
+                        hl.Adornee = football
+                        hl.Parent = football
+                        entry.Highlight = hl
                     end
+                    entry.Highlight.Enabled = true
+                elseif entry.Highlight then
+                    entry.Highlight.Enabled = false
                 end
 
-                if ray then
-                    landingPos = ray.Position
-                    for j = i + 1, #self._ballLines do
-                        if self._ballLines[j] then self._ballLines[j].Visible = false end
-                    end
-                    break
+                -- Distance Tag
+                if State.Visuals.BallDistance and entry.Text and onScreen and sPos.Z > 0 then
+                    entry.Text.Text = string.format("SAVIOR // BALL [%d STUDS]", math.floor(dist))
+                    entry.Text.Position = Vector2.new(sPos.X, sPos.Y - 24)
+                    entry.Text.Visible = true
+                elseif entry.Text then
+                    entry.Text.Visible = false
                 end
 
-                currentP = nextP
-                currentV = currentV + (g * dt)
-            end
+                -- Trajectory & Landing
+                local vel = football.AssemblyLinearVelocity
+                if State.Visuals.BallTrajectory and vel.Magnitude > 4 then
+                    local currentP = fPos
+                    local currentV = vel
+                    local dt = 0.05
+                    local g = Vector3.new(0, -Workspace.Gravity, 0)
+                    local landingPos = nil
 
-            if State.Visuals.BallLandingMarker and landingPos and self._ballCircle then
-                local lScreen, lVis = Camera:WorldToViewportPoint(landingPos)
-                if lVis and lScreen.Z > 0 then
-                    self._ballCircle.Position = Vector2.new(lScreen.X, lScreen.Y)
-                    self._ballCircle.Visible = true
+                    local maxSteps = math.clamp(State.Visuals.PredictionSteps, 10, 40)
+                    for i = 1, maxSteps do
+                        local nextP = currentP + (currentV * dt) + (0.5 * g * dt * dt)
+                        local ray = Workspace:Raycast(currentP, nextP - currentP)
+
+                        local p1, v1 = Camera:WorldToViewportPoint(currentP)
+                        local p2, v2 = Camera:WorldToViewportPoint(ray and ray.Position or nextP)
+
+                        local line = entry.Lines[i]
+                        if line then
+                            if v1 and v2 and p1.Z > 0 and p2.Z > 0 then
+                                line.From = Vector2.new(p1.X, p1.Y)
+                                line.To = Vector2.new(p2.X, p2.Y)
+                                line.Visible = true
+                            else
+                                line.Visible = false
+                            end
+                        end
+
+                        if ray then
+                            landingPos = ray.Position
+                            for j = i + 1, #entry.Lines do
+                                if entry.Lines[j] then entry.Lines[j].Visible = false end
+                            end
+                            break
+                        end
+
+                        currentP = nextP
+                        currentV = currentV + (g * dt)
+                    end
+
+                    if State.Visuals.BallLandingMarker and landingPos and entry.Circle then
+                        local lScreen, lVis = Camera:WorldToViewportPoint(landingPos)
+                        if lVis and lScreen.Z > 0 then
+                            entry.Circle.Position = Vector2.new(lScreen.X, lScreen.Y)
+                            entry.Circle.Visible = true
+                        else
+                            entry.Circle.Visible = false
+                        end
+                    elseif entry.Circle then
+                        entry.Circle.Visible = false
+                    end
                 else
-                    self._ballCircle.Visible = false
+                    for _, line in ipairs(entry.Lines) do line.Visible = false end
+                    if entry.Circle then entry.Circle.Visible = false end
                 end
-            elseif self._ballCircle then
-                self._ballCircle.Visible = false
             end
-        else
-            for _, line in ipairs(self._ballLines) do line.Visible = false end
-            if self._ballCircle then self._ballCircle.Visible = false end
         end
     else
-        if self._ballHighlight then self._ballHighlight.Enabled = false end
-        if self._ballText then self._ballText.Visible = false end
-        if self._ballCircle then self._ballCircle.Visible = false end
-        for _, line in ipairs(self._ballLines) do line.Visible = false end
+        for _, entry in pairs(self._ballDrawings) do
+            if entry.Highlight then entry.Highlight.Enabled = false end
+            if entry.Text then entry.Text.Visible = false end
+            if entry.Circle then entry.Circle.Visible = false end
+            for _, line in ipairs(entry.Lines) do line.Visible = false end
+        end
     end
 
+    -- 2. Player Visuals & Corrected Head-Anchored Nametags
     if State.Visuals.PlayerMaster and hasDrawing then
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
@@ -735,39 +780,64 @@ function VisualsSystem:Render()
                     self._playerDrawings[plr] = entry
                 end
 
-                local char = plr.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                local pChar = plr.Character
+                local pHrp = pChar and pChar:FindFirstChild("HumanoidRootPart")
+                local pHum = pChar and pChar:FindFirstChildOfClass("Humanoid")
+                local pHead = pChar and (pChar:FindFirstChild("Head") or pHrp)
 
-                if filterMatch and hrp and hum and hum.Health > 0 then
-                    local sPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if filterMatch and pHrp and pHum and pHum.Health > 0 and pHead then
+                    local sPos, onScreen = Camera:WorldToViewportPoint(pHrp.Position)
                     if onScreen and sPos.Z > 0 then
                         local color = isTeam and Theme.Colors.Teammate or Theme.Colors.Opponent
-                        local head = char:FindFirstChild("Head")
-                        local headPos = head and Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0)) or Vector2.new(sPos.X, sPos.Y - 20)
-                        local boxHeight = math.abs(sPos.Y - headPos.Y) * 2.2
-                        local boxWidth = boxHeight * 0.65
 
-                        if State.Visuals.PlayerBoxes and entry.Box then
-                            entry.Box.Size = Vector2.new(boxWidth, boxHeight)
-                            entry.Box.Position = Vector2.new(sPos.X - boxWidth / 2, sPos.Y - boxHeight / 2)
-                            entry.Box.Color = color
-                            entry.Box.Visible = true
-                        elseif entry.Box then entry.Box.Visible = false end
+                        -- World positions for exact 3D-to-2D bounding
+                        local topWorld = pHead.Position + Vector3.new(0, 1.8, 0)
+                        local bottomWorld = pHrp.Position - Vector3.new(0, 3.0, 0)
 
-                        if State.Visuals.PlayerTracers and entry.Tracer then
-                            entry.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                            entry.Tracer.To = Vector2.new(sPos.X, sPos.Y)
-                            entry.Tracer.Color = color
-                            entry.Tracer.Visible = true
-                        elseif entry.Tracer then entry.Tracer.Visible = false end
+                        local topScreen, topVis = Camera:WorldToViewportPoint(topWorld)
+                        local bottomScreen, botVis = Camera:WorldToViewportPoint(bottomWorld)
 
-                        if State.Visuals.PlayerNames and entry.Name then
-                            entry.Name.Text = string.format("%s [%dm]", string.upper(plr.DisplayName), math.floor(sPos.Z))
-                            entry.Name.Position = Vector2.new(sPos.X, sPos.Y - (boxHeight / 2) - 15)
-                            entry.Name.Color = color
-                            entry.Name.Visible = true
-                        elseif entry.Name then entry.Name.Visible = false end
+                        if topVis and botVis and topScreen.Z > 0 then
+                            local boxHeight = math.abs(bottomScreen.Y - topScreen.Y)
+                            local boxWidth = boxHeight * 0.62
+
+                            -- Box
+                            if State.Visuals.PlayerBoxes and entry.Box then
+                                entry.Box.Size = Vector2.new(boxWidth, boxHeight)
+                                entry.Box.Position = Vector2.new(topScreen.X - boxWidth / 2, topScreen.Y)
+                                entry.Box.Color = color
+                                entry.Box.Visible = true
+                            elseif entry.Box then entry.Box.Visible = false end
+
+                            -- Tracer
+                            if State.Visuals.PlayerTracers and entry.Tracer then
+                                entry.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                                entry.Tracer.To = Vector2.new(bottomScreen.X, bottomScreen.Y)
+                                entry.Tracer.Color = color
+                                entry.Tracer.Visible = true
+                            elseif entry.Tracer then entry.Tracer.Visible = false end
+
+                            -- Nametag (Anchored Cleanly ABOVE The Head)
+                            if State.Visuals.PlayerNames and entry.Name then
+                                local nameTagWorld = pHead.Position + Vector3.new(0, 2.4, 0)
+                                local tagScreen, tagVis = Camera:WorldToViewportPoint(nameTagWorld)
+                                if tagVis and tagScreen.Z > 0 then
+                                    entry.Name.Text = string.format("%s [%dm]", string.upper(plr.DisplayName), math.floor(sPos.Z))
+                                    entry.Name.Position = Vector2.new(tagScreen.X, tagScreen.Y - 14)
+                                    entry.Name.Color = color
+                                    entry.Name.Size = 13
+                                    entry.Name.Center = true
+                                    entry.Name.Outline = true
+                                    entry.Name.Visible = true
+                                else
+                                    entry.Name.Visible = false
+                                end
+                            elseif entry.Name then entry.Name.Visible = false end
+                        else
+                            if entry.Box then entry.Box.Visible = false end
+                            if entry.Tracer then entry.Tracer.Visible = false end
+                            if entry.Name then entry.Name.Visible = false end
+                        end
                     else
                         if entry.Box then entry.Box.Visible = false end
                         if entry.Tracer then entry.Tracer.Visible = false end
@@ -808,12 +878,8 @@ end
 function AccountDB.getAccounts()
     AccountDB.ensureFolder()
     if typeof(readfile) == "function" and typeof(isfile) == "function" and isfile(AccountDB.AccountsPath) then
-        local ok, data = pcall(function()
-            return HttpService:JSONDecode(readfile(AccountDB.AccountsPath))
-        end)
-        if ok and type(data) == "table" then
-            return data
-        end
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(AccountDB.AccountsPath)) end)
+        if ok and type(data) == "table" then return data end
     end
     return {}
 end
@@ -821,21 +887,15 @@ end
 function AccountDB.saveAccounts(accounts)
     AccountDB.ensureFolder()
     if typeof(writefile) == "function" then
-        pcall(function()
-            writefile(AccountDB.AccountsPath, HttpService:JSONEncode(accounts))
-        end)
+        pcall(function() writefile(AccountDB.AccountsPath, HttpService:JSONEncode(accounts)) end)
     end
 end
 
 function AccountDB.getSession()
     AccountDB.ensureFolder()
     if typeof(readfile) == "function" and typeof(isfile) == "function" and isfile(AccountDB.SessionPath) then
-        local ok, data = pcall(function()
-            return HttpService:JSONDecode(readfile(AccountDB.SessionPath))
-        end)
-        if ok and type(data) == "table" then
-            return data
-        end
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(AccountDB.SessionPath)) end)
+        if ok and type(data) == "table" then return data end
     end
     return nil
 end
@@ -843,32 +903,23 @@ end
 function AccountDB.saveSession(username)
     AccountDB.ensureFolder()
     if typeof(writefile) == "function" then
-        pcall(function()
-            writefile(AccountDB.SessionPath, HttpService:JSONEncode({ username = username, logged_in_at = tick() }))
-        end)
+        pcall(function() writefile(AccountDB.SessionPath, HttpService:JSONEncode({ username = username, logged_in_at = tick() })) end)
     end
 end
 
 function AccountDB.clearSession()
     AccountDB.ensureFolder()
     if typeof(writefile) == "function" then
-        pcall(function()
-            writefile(AccountDB.SessionPath, "{}")
-        end)
+        pcall(function() writefile(AccountDB.SessionPath, "{}") end)
     end
 end
 
--- Validate Key (Discord Bot Remote or Master Developer Key)
 function AccountDB.verifyDiscordKey(key)
     if not key or key == "" then return false, "No key provided" end
     key = string.gsub(key, "%s+", "")
 
-    -- 1. Check Master Keys
-    if MASTER_DEV_KEYS[key] then
-        return true, "Master Developer Authorization"
-    end
+    if MASTER_DEV_KEYS[key] then return true, "Master Developer Authorization" end
 
-    -- 2. Query Remote Discord Bot API if available
     local canHttp = typeof(game.HttpGet) == "function" or typeof(request) == "function"
     if canHttp then
         local ok, resp = pcall(function()
@@ -891,7 +942,6 @@ function AccountDB.verifyDiscordKey(key)
         end
     end
 
-    -- Fallback format check for Discord generated key pattern (SAVIOR-XXXX-XXXX)
     if string.match(key, "^SAVIOR%-[%w%d]+%-[%w%d]+$") then
         return true, "Discord License Key Verified"
     end
@@ -900,7 +950,7 @@ function AccountDB.verifyDiscordKey(key)
 end
 
 -- =====================================================================
--- 8. COMPACT HACKER LOADING SCREEN (EXACT MENU BOUNDS: 680 x 430)
+-- 8. COMPACT HACKER LOADING SCREEN (MENU-BOUNDS 680 x 430)
 -- =====================================================================
 local function playHackerIntro(parentGui, onFinish)
     local screen = Instance.new("Frame")
@@ -911,7 +961,6 @@ local function playHackerIntro(parentGui, onFinish)
     screen.ZIndex = 120
     screen.Parent = parentGui
 
-    -- Card sized EXACTLY to Menu bounds: 680 x 430
     local card = Instance.new("Frame")
     card.Size = UDim2.new(0, 680, 0, 430)
     card.Position = UDim2.new(0.5, -340, 0.5, -215)
@@ -930,7 +979,6 @@ local function playHackerIntro(parentGui, onFinish)
     cStroke.Thickness = 1.3
     cStroke.Parent = card
 
-    -- Header Bar
     local topBar = Instance.new("Frame")
     topBar.Size = UDim2.new(1, 0, 0, 42)
     topBar.BackgroundColor3 = Theme.Colors.Header
@@ -955,7 +1003,6 @@ local function playHackerIntro(parentGui, onFinish)
     logo.ZIndex = 123
     logo.Parent = topBar
 
-    -- Terminal Console Box
     local console = Instance.new("Frame")
     console.Size = UDim2.new(1, -28, 1, -64)
     console.Position = UDim2.new(0, 14, 0, 50)
@@ -1001,22 +1048,20 @@ local function playHackerIntro(parentGui, onFinish)
 
     task.spawn(function()
         addLogLine("root@savior:~$ ./init_hub --bootstrap", Color3.fromRGB(140, 140, 140))
-        task.wait(0.22)
+        task.wait(0.20)
         addLogLine("> [MEM] Hooking physical memory vectors...", Color3.fromRGB(220, 220, 220))
-        task.wait(0.24)
+        task.wait(0.22)
+        addLogLine("> [BALLS] Multi-ball tracking engine initialized", Color3.fromRGB(255, 255, 255))
+        task.wait(0.22)
         addLogLine("> [NET] Handshake established with Discord Licensing Module", Color3.fromRGB(255, 255, 255))
-        task.wait(0.25)
+        task.wait(0.24)
         addLogLine("> [PHYS] Calibrating suction vectors & jump boost impulse", Color3.fromRGB(200, 200, 200))
-        task.wait(0.25)
+        task.wait(0.24)
         addLogLine("> [AUTH] Database session ready. Transferring to interface...", Color3.fromRGB(255, 255, 255))
 
         task.wait(0.4)
-        local fade = TweenService:Create(screen, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
-            BackgroundTransparency = 1
-        })
-        TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
-            BackgroundTransparency = 1
-        }):Play()
+        local fade = TweenService:Create(screen, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 })
+        TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
         fade:Play()
         fade.Completed:Connect(function()
             screen:Destroy()
@@ -1034,7 +1079,8 @@ local Hub = {
     Tabs = {},
     CurrentTab = nil,
     _connections = {},
-    _activeBreadcrumbLabel = nil
+    _activeBreadcrumbLabel = nil,
+    _activeFlyout = nil
 }
 
 function Hub:Init()
@@ -1049,7 +1095,7 @@ function Hub:Init()
     screenGui.Parent = safeParent
     self.ScreenGui = screenGui
 
-    -- Main Hub Frame (Translucent Black Glass - 680 x 430)
+    -- Main Hub Frame (680 x 430)
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 680, 0, 430)
@@ -1057,7 +1103,7 @@ function Hub:Init()
     mainFrame.BackgroundColor3 = Theme.Colors.Background
     mainFrame.BackgroundTransparency = Theme.Colors.BackgroundTrans
     mainFrame.BorderSizePixel = 0
-    mainFrame.ClipsDescendants = true
+    mainFrame.ClipsDescendants = false -- Set false so flyouts and badges are never clipped
     mainFrame.Visible = false
     mainFrame.Parent = screenGui
     self.MainFrame = mainFrame
@@ -1086,7 +1132,7 @@ function Hub:Init()
     glowStroke.Thickness = 1.5
     glowStroke.Parent = outerGlow
 
-    -- Header Bar with Scary S Emblem & Breadcrumbs
+    -- Header Bar
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 42)
@@ -1190,7 +1236,7 @@ function Hub:Init()
     closeBtn.MouseButton1Click:Connect(function() self:ToggleUI(false) end)
     minBtn.MouseButton1Click:Connect(function() self:ToggleUI() end)
 
-    -- Window Dragging
+    -- Window Dragging (Syncs Flyout Position)
     local dragging, dragStart, startPos
     header.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1198,9 +1244,7 @@ function Hub:Init()
             dragStart = input.Position
             startPos = mainFrame.Position
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
             end)
         end
     end)
@@ -1214,6 +1258,15 @@ function Hub:Init()
                 startPos.Y.Scale,
                 startPos.Y.Offset + delta.Y
             )
+            -- If flyout is open, keep it attached to the side
+            if Hub._activeFlyout and Hub._activeFlyout.Parent then
+                Hub._activeFlyout.Position = UDim2.new(
+                    mainFrame.Position.X.Scale,
+                    mainFrame.Position.X.Offset + 690,
+                    mainFrame.Position.Y.Scale,
+                    mainFrame.Position.Y.Offset + Hub._activeFlyoutY
+                )
+            end
         end
     end)
     table.insert(self._connections, dragConn)
@@ -1292,11 +1345,7 @@ function Hub:Init()
 
     task.spawn(function()
         pcall(function()
-            local thumb = Players:GetUserThumbnailAsync(
-                LocalPlayer.UserId,
-                Enum.ThumbnailType.HeadShot,
-                Enum.ThumbnailSize.Size48x48
-            )
+            local thumb = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
             avatarImg.Image = thumb
         end)
     end)
@@ -1326,10 +1375,7 @@ function Hub:Init()
     -- Keybind Listener
     local menuKeyConn = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
-        if input.KeyCode == State.Settings.ToggleKey then
-            self:ToggleUI()
-        end
-
+        if input.KeyCode == State.Settings.ToggleKey then self:ToggleUI() end
         if not gpe and input.UserInputType == Enum.UserInputType.Keyboard then
             for _, bindData in pairs(KeybindRegistry) do
                 if bindData.Key == input.KeyCode and bindData.ToggleFunc then
@@ -1340,7 +1386,7 @@ function Hub:Init()
     end)
     table.insert(self._connections, menuKeyConn)
 
-    -- High-Response Jump Boost Listener
+    -- Jump Boost Listener
     local jumpConn = UserInputService.JumpRequest:Connect(function()
         if not State.Physics.InfiniteJump and not State.Physics.JumpEnabled then return end
         local char, hrp, hum = Environment.getLocalCharacter()
@@ -1358,33 +1404,34 @@ function Hub:Init()
     self:CreateNotifications(screenGui)
     self:BuildPages()
 
-    -- =================================================================
-    -- 9.1 AUTHENTICATION & LOADING LIFECYCLE
-    -- =================================================================
+    -- Close flyouts if user clicks outside
+    local clickOutsideConn = UserInputService.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            if Hub._activeFlyout and Hub._activeFlyout.Parent then
+                local mPos = UserInputService:GetMouseLocation()
+                local fPos = Hub._activeFlyout.AbsolutePosition
+                local fSz = Hub._activeFlyout.AbsoluteSize
+                local inFlyout = (mPos.X >= fPos.X and mPos.X <= fPos.X + fSz.X and mPos.Y >= fPos.Y and mPos.Y <= fPos.Y + fSz.Y)
+                if not inFlyout then
+                    Hub._activeFlyout:Destroy()
+                    Hub._activeFlyout = nil
+                end
+            end
+        end
+    end)
+    table.insert(self._connections, clickOutsideConn)
+
+    -- Lifecycle: Hacker Loader -> Authentication Gate
     playHackerIntro(screenGui, function()
-        -- After hacker terminal completes, check session
-        local session = AccountDB.getSession()
-        local accounts = AccountDB.getAccounts()
-
-        local loggedIn = false
-        if session and session.username and accounts[session.username] then
-            loggedIn = true
-            welcomeLbl.Text = "Welcome, " .. string.sub(session.username, 1, 10)
-        end
-
-        if loggedIn then
+        self:ShowAuthWindow(screenGui, function(username)
+            welcomeLbl.Text = "Welcome, " .. string.sub(username, 1, 10)
             mainFrame.Visible = true
-        else
-            self:ShowAuthWindow(screenGui, function(username)
-                welcomeLbl.Text = "Welcome, " .. string.sub(username, 1, 10)
-                mainFrame.Visible = true
-            end)
-        end
+        end)
     end)
 end
 
 -- =====================================================================
--- 9.2 FULL-SIZED LOGIN & SIGN UP SYSTEM (MATCHES 680 x 430 MENU BOUNDS)
+-- 9.2 BEAUTIFUL GLASSMORPHIC AUTHENTICATION WINDOW (LOGIN & SIGN UP)
 -- =====================================================================
 function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     local authFrame = Instance.new("Frame")
@@ -1472,7 +1519,7 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     brandLbl.Parent = leftBrand
 
     local brandSub = Instance.new("TextLabel")
-    brandSub.Text = "Secure client database &\nDiscord license validation."
+    brandSub.Text = "Discord License Validation\n& Multi-Ball Tracking"
     brandSub.Font = Theme.Fonts.Body
     brandSub.TextSize = 10
     brandSub.TextColor3 = Theme.Colors.TextMuted
@@ -1490,7 +1537,7 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     rightHost.ZIndex = 111
     rightHost.Parent = authFrame
 
-    -- Mode Switch Bar (Top of form: "LOGIN" vs "SIGN UP")
+    -- Mode Switch Bar (Top: "LOGIN" vs "SIGN UP")
     local switchBar = Instance.new("Frame")
     switchBar.Size = UDim2.new(1, -60, 0, 32)
     switchBar.Position = UDim2.new(0, 30, 0, 18)
@@ -1536,6 +1583,77 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     stCorner.CornerRadius = Theme.Corners.Element
     stCorner.Parent = signupTabBtn
 
+    -- Modern Textbox Factory with Focus Highlights & Labels
+    local function makeSleekInput(parent, yOffset, labelText, placeholder, isPassword)
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, 0, 0, 48)
+        container.Position = UDim2.new(0, 0, 0, yOffset)
+        container.BackgroundTransparency = 1
+        container.ZIndex = 113
+        container.Parent = parent
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Text = labelText
+        lbl.Font = Theme.Fonts.Subheader
+        lbl.TextSize = 10
+        lbl.TextColor3 = Theme.Colors.TextSecondary
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Size = UDim2.new(1, 0, 0, 14)
+        lbl.Position = UDim2.new(0, 2, 0, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.ZIndex = 114
+        lbl.Parent = container
+
+        local boxFrame = Instance.new("Frame")
+        boxFrame.Size = UDim2.new(1, 0, 0, 32)
+        boxFrame.Position = UDim2.new(0, 0, 0, 16)
+        boxFrame.BackgroundColor3 = Theme.Colors.InputBase
+        boxFrame.BorderSizePixel = 0
+        boxFrame.ZIndex = 114
+        boxFrame.Parent = container
+
+        local bfCorner = Instance.new("UICorner")
+        bfCorner.CornerRadius = Theme.Corners.Element
+        bfCorner.Parent = boxFrame
+
+        local bfStroke = Instance.new("UIStroke")
+        bfStroke.Color = Theme.Colors.InputBorder
+        bfStroke.Thickness = 1
+        bfStroke.Parent = boxFrame
+
+        local box = Instance.new("TextBox")
+        box.Size = UDim2.new(1, -20, 1, 0)
+        box.Position = UDim2.new(0, 10, 0, 0)
+        box.BackgroundTransparency = 1
+        box.Font = Theme.Fonts.Body
+        box.TextSize = 12
+        box.TextColor3 = Theme.Colors.TextPrimary
+        box.PlaceholderText = placeholder
+        box.PlaceholderColor3 = Theme.Colors.TextMuted
+        box.ClearTextOnFocus = false
+        box.ZIndex = 115
+        box.Parent = boxFrame
+
+        box.Focused:Connect(function()
+            TweenService:Create(bfStroke, TweenInfo.new(0.18), { Color = Theme.Colors.InputFocusBorder }):Play()
+        end)
+        box.FocusLost:Connect(function()
+            TweenService:Create(bfStroke, TweenInfo.new(0.18), { Color = Theme.Colors.InputBorder }):Play()
+        end)
+
+        if isPassword then
+            local realPass = ""
+            box:GetPropertyChangedSignal("Text"):Connect(function()
+                if box.Text == string.rep("•", #realPass) then return end
+                realPass = box.Text
+                box.Text = string.rep("•", #realPass)
+            end)
+            return box, function() return realPass end
+        end
+
+        return box, function() return box.Text end
+    end
+
     -- 1. LOGIN VIEW
     local loginView = Instance.new("Frame")
     loginView.Size = UDim2.new(1, -60, 1, -70)
@@ -1545,59 +1663,19 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     loginView.Visible = true
     loginView.Parent = rightHost
 
-    local function makeInput(parent, yOffset, placeholder, isPassword)
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, 0, 0, 36)
-        frame.Position = UDim2.new(0, 0, 0, yOffset)
-        frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-        frame.BorderSizePixel = 0
-        frame.ZIndex = 113
-        frame.Parent = parent
+    local session = AccountDB.getSession()
+    local savedUser = (session and session.username) or ""
 
-        local fCorner = Instance.new("UICorner")
-        fCorner.CornerRadius = Theme.Corners.Element
-        fCorner.Parent = frame
-
-        local fStroke = Instance.new("UIStroke")
-        fStroke.Color = Color3.fromRGB(48, 48, 48)
-        fStroke.Thickness = 1
-        fStroke.Parent = frame
-
-        local box = Instance.new("TextBox")
-        box.Size = UDim2.new(1, -18, 1, 0)
-        box.Position = UDim2.new(0, 10, 0, 0)
-        box.BackgroundTransparency = 1
-        box.Font = Theme.Fonts.Body
-        box.TextSize = 12
-        box.TextColor3 = Theme.Colors.TextPrimary
-        box.PlaceholderText = placeholder
-        box.PlaceholderColor3 = Theme.Colors.TextMuted
-        box.ClearTextOnFocus = false
-        box.ZIndex = 114
-        box.Parent = frame
-
-        if isPassword then
-            local realText = ""
-            box:GetPropertyChangedSignal("Text"):Connect(function()
-                if box.Text == string.rep("•", #realText) then return end
-                realText = box.Text
-                box.Text = string.rep("•", #realText)
-            end)
-            return box, function() return realText end
-        end
-
-        return box, function() return box.Text end
-    end
-
-    local loginUserBox, getLoginUser = makeInput(loginView, 25, "Username", false)
-    local loginPassBox, getLoginPass = makeInput(loginView, 75, "Password", true)
+    local loginUserBox, getLoginUser = makeSleekInput(loginView, 12, "USERNAME", "Enter your username", false)
+    local loginPassBox, getLoginPass = makeSleekInput(loginView, 72, "PASSWORD", "Enter your password", true)
+    if savedUser ~= "" then loginUserBox.Text = savedUser end
 
     local loginBtn = Instance.new("TextButton")
     loginBtn.Size = UDim2.new(1, 0, 0, 36)
-    loginBtn.Position = UDim2.new(0, 0, 0, 135)
+    loginBtn.Position = UDim2.new(0, 0, 0, 145)
     loginBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
     loginBtn.BorderSizePixel = 0
-    loginBtn.Text = "LOGIN"
+    loginBtn.Text = "SIGN IN"
     loginBtn.Font = Theme.Fonts.Header
     loginBtn.TextSize = 12
     loginBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -1614,7 +1692,7 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     loginFeedback.TextSize = 10
     loginFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
     loginFeedback.Size = UDim2.new(1, 0, 0, 18)
-    loginFeedback.Position = UDim2.new(0, 0, 0, 185)
+    loginFeedback.Position = UDim2.new(0, 0, 0, 195)
     loginFeedback.BackgroundTransparency = 1
     loginFeedback.ZIndex = 113
     loginFeedback.Parent = loginView
@@ -1628,16 +1706,16 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     signupView.Visible = false
     signupView.Parent = rightHost
 
-    local signUserBox, getSignUser = makeInput(signupView, 10, "Choose Username", false)
-    local signPassBox, getSignPass = makeInput(signupView, 58, "Choose Password", true)
-    local signKeyBox, getSignKey = makeInput(signupView, 106, "Discord License Key (SAVIOR-...)", false)
+    local signUserBox, getSignUser = makeSleekInput(signupView, 0, "CHOOSE USERNAME", "3+ characters", false)
+    local signPassBox, getSignPass = makeSleekInput(signupView, 54, "CHOOSE PASSWORD", "4+ characters", true)
+    local signKeyBox, getSignKey = makeSleekInput(signupView, 108, "DISCORD LICENSE KEY", "SAVIOR-XXXX-XXXX", false)
 
     local registerBtn = Instance.new("TextButton")
     registerBtn.Size = UDim2.new(1, 0, 0, 36)
-    registerBtn.Position = UDim2.new(0, 0, 0, 160)
+    registerBtn.Position = UDim2.new(0, 0, 0, 175)
     registerBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
     registerBtn.BorderSizePixel = 0
-    registerBtn.Text = "REGISTER & ACTIVATE"
+    registerBtn.Text = "CREATE & ACTIVATE ACCOUNT"
     registerBtn.Font = Theme.Fonts.Header
     registerBtn.TextSize = 12
     registerBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -1654,16 +1732,14 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     signFeedback.TextSize = 10
     signFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
     signFeedback.Size = UDim2.new(1, 0, 0, 18)
-    signFeedback.Position = UDim2.new(0, 0, 0, 205)
+    signFeedback.Position = UDim2.new(0, 0, 0, 222)
     signFeedback.BackgroundTransparency = 1
     signFeedback.ZIndex = 113
     signFeedback.Parent = signupView
 
-    -- Switch Tab Logic
     local function setAuthMode(isLogin)
         loginView.Visible = isLogin
         signupView.Visible = not isLogin
-
         loginFeedback.Text = ""
         signFeedback.Text = ""
 
@@ -1685,7 +1761,6 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
     loginTabBtn.MouseButton1Click:Connect(function() setAuthMode(true) end)
     signupTabBtn.MouseButton1Click:Connect(function() setAuthMode(false) end)
 
-    -- Sign Up Action
     registerBtn.MouseButton1Click:Connect(function()
         local u = string.gsub(getSignUser(), "%s+", "")
         local p = getSignPass()
@@ -1713,13 +1788,12 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
         task.wait(0.25)
         local keyValid, keyMsg = AccountDB.verifyDiscordKey(k)
         if not keyValid then
-            registerBtn.Text = "REGISTER & ACTIVATE"
+            registerBtn.Text = "CREATE & ACTIVATE ACCOUNT"
             signFeedback.Text = "✕ " .. (keyMsg or "Invalid Discord License Key")
             signFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
             return
         end
 
-        -- Save new account to database
         accounts[u] = {
             password = p,
             license_key = k,
@@ -1727,18 +1801,17 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
         }
         AccountDB.saveAccounts(accounts)
 
-        signFeedback.Text = "✓ Account created successfully! Please log in."
+        signFeedback.Text = "✓ Account created! Switch to Login tab to proceed."
         signFeedback.TextColor3 = Color3.fromRGB(255, 255, 255)
         registerBtn.Text = "SUCCESS"
 
         task.delay(1.0, function()
             setAuthMode(true)
             loginUserBox.Text = u
-            registerBtn.Text = "REGISTER & ACTIVATE"
+            registerBtn.Text = "CREATE & ACTIVATE ACCOUNT"
         end)
     end)
 
-    -- Login Action
     loginBtn.MouseButton1Click:Connect(function()
         local u = string.gsub(getLoginUser(), "%s+", "")
         local p = getLoginPass()
@@ -1750,22 +1823,20 @@ function Hub:ShowAuthWindow(parentGui, onAuthSuccess)
         local acc = accounts[u]
 
         if not acc or acc.password ~= p then
-            loginBtn.Text = "LOGIN"
+            loginBtn.Text = "SIGN IN"
             loginFeedback.Text = "✕ Invalid username or password."
             loginFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
             return
         end
 
-        -- Verify attached license key
         local keyValid, keyMsg = AccountDB.verifyDiscordKey(acc.license_key)
         if not keyValid then
-            loginBtn.Text = "LOGIN"
+            loginBtn.Text = "SIGN IN"
             loginFeedback.Text = "✕ License Key expired or revoked."
             loginFeedback.TextColor3 = Color3.fromRGB(255, 60, 60)
             return
         end
 
-        -- Save active session for auto-login next execution
         AccountDB.saveSession(u)
 
         loginFeedback.Text = "✓ ACCESS GRANTED"
@@ -1785,6 +1856,10 @@ function Hub:ToggleUI(override)
         self.Visible = not self.Visible
     end
     self.MainFrame.Visible = self.Visible
+    if not self.Visible and Hub._activeFlyout then
+        Hub._activeFlyout:Destroy()
+        Hub._activeFlyout = nil
+    end
 end
 
 function Hub:CreateWatermark(screenGui)
@@ -1828,9 +1903,7 @@ function Hub:CreateWatermark(screenGui)
             frames = 0
             lastTick = now
             local ping = 0
-            pcall(function()
-                ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-            end)
+            pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
             label.Text = string.format("SAVIOR // FPS: %d | Ping: %dms", fps, ping)
         end
     end)
@@ -1980,6 +2053,7 @@ function Hub:CreateTab(name)
 
     btn.MouseButton1Click:Connect(function()
         if self.CurrentTab == tabObj then return end
+        if Hub._activeFlyout then Hub._activeFlyout:Destroy() Hub._activeFlyout = nil end
         for _, t in ipairs(self.Tabs) do t.SetActive(false) end
         setActive(true)
         self.CurrentTab = tabObj
@@ -1997,7 +2071,7 @@ function Hub:CreateTab(name)
 end
 
 -- =====================================================================
--- 10. COMPONENT FACTORY (MONOCHROME CHECKBOX, KEYBINDS, SLIDERS)
+-- 10. COMPONENT FACTORY (WITH FLYOUT SIDE-POPUP DROPDOWNS)
 -- =====================================================================
 local function addSection(page, titleText)
     local sec = Instance.new("Frame")
@@ -2273,9 +2347,9 @@ local function addSlider(sec, title, minVal, maxVal, defVal, stepVal, suffix, ca
     }
 end
 
+-- FLYOUT SIDE-POPUP DROPDOWN (No clipping, completely visible on right side of Menu)
 local function addDropdown(sec, title, options, defOpt, callback)
     local selected = defOpt or options[1] or ""
-    local open = false
 
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 34)
@@ -2335,7 +2409,7 @@ local function addDropdown(sec, title, options, defOpt, callback)
     bLbl.Parent = btn
 
     local arrow = Instance.new("TextLabel")
-    arrow.Text = "▼"
+    arrow.Text = "▶"
     arrow.Font = Theme.Fonts.Body
     arrow.TextSize = 8
     arrow.TextColor3 = Theme.Colors.TextMuted
@@ -2344,63 +2418,115 @@ local function addDropdown(sec, title, options, defOpt, callback)
     arrow.BackgroundTransparency = 1
     arrow.Parent = btn
 
-    local list = Instance.new("Frame")
-    list.Size = UDim2.new(1, 0, 0, #options * 24 + 6)
-    list.Position = UDim2.new(0, 0, 1, 4)
-    list.BackgroundColor3 = Theme.Colors.Header
-    list.BackgroundTransparency = 0.05
-    list.BorderSizePixel = 0
-    list.Visible = false
-    list.ZIndex = 50
-    list.Parent = btn
+    -- Open Side Flyout Panel (Attached directly to ScreenGui on right side of Menu)
+    btn.MouseButton1Click:Connect(function()
+        if Hub._activeFlyout and Hub._activeFlyout.Parent then
+            Hub._activeFlyout:Destroy()
+            Hub._activeFlyout = nil
+        end
 
-    local lCorner = Instance.new("UICorner")
-    lCorner.CornerRadius = Theme.Corners.Element
-    lCorner.Parent = list
+        local mainFrame = Hub.MainFrame
+        local yRelative = btn.AbsolutePosition.Y - mainFrame.AbsolutePosition.Y
+        Hub._activeFlyoutY = yRelative
 
-    local lStroke = Instance.new("UIStroke")
-    lStroke.Color = Theme.Colors.Accent
-    lStroke.Thickness = 1
-    lStroke.Parent = list
+        local flyout = Instance.new("Frame")
+        flyout.Name = "DropdownFlyout_" .. title
+        flyout.Size = UDim2.new(0, 175, 0, #options * 30 + 32)
+        flyout.Position = UDim2.new(
+            mainFrame.Position.X.Scale,
+            mainFrame.Position.X.Offset + 690,
+            mainFrame.Position.Y.Scale,
+            mainFrame.Position.Y.Offset + yRelative
+        )
+        flyout.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+        flyout.BackgroundTransparency = 0.1
+        flyout.BorderSizePixel = 0
+        flyout.ZIndex = 200
+        flyout.Parent = Hub.ScreenGui
+        Hub._activeFlyout = flyout
 
-    local lLayout = Instance.new("UIListLayout")
-    lLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    lLayout.Padding = UDim.new(0, 2)
-    lLayout.Parent = list
+        local foCorner = Instance.new("UICorner")
+        foCorner.CornerRadius = Theme.Corners.Element
+        foCorner.Parent = flyout
 
-    local lPad = Instance.new("UIPadding")
-    lPad.PaddingTop = UDim.new(0, 3)
-    lPad.PaddingBottom = UDim.new(0, 3)
-    lPad.PaddingLeft = UDim.new(0, 4)
-    lPad.PaddingRight = UDim.new(0, 4)
-    lPad.Parent = list
+        local foStroke = Instance.new("UIStroke")
+        foStroke.Color = Theme.Colors.BorderHover
+        foStroke.Thickness = 1.3
+        foStroke.Parent = flyout
 
-    local function toggleMenu()
-        open = not open
-        list.Visible = open
-        arrow.Text = open and "▲" or "▼"
-    end
-    btn.MouseButton1Click:Connect(toggleMenu)
+        local foHeader = Instance.new("TextLabel")
+        foHeader.Text = string.upper(title)
+        foHeader.Font = Theme.Fonts.Header
+        foHeader.TextSize = 10
+        foHeader.TextColor3 = Theme.Colors.TextMuted
+        foHeader.TextXAlignment = Enum.TextXAlignment.Left
+        foHeader.Size = UDim2.new(1, -16, 0, 22)
+        foHeader.Position = UDim2.new(0, 10, 0, 4)
+        foHeader.BackgroundTransparency = 1
+        foHeader.ZIndex = 201
+        foHeader.Parent = flyout
 
-    for _, opt in ipairs(options) do
-        local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(1, 0, 0, 22)
-        optBtn.BackgroundTransparency = 1
-        optBtn.BorderSizePixel = 0
-        optBtn.Text = opt
-        optBtn.Font = Theme.Fonts.Body
-        optBtn.TextSize = 11
-        optBtn.TextColor3 = (opt == selected) and Theme.Colors.Accent or Theme.Colors.TextSecondary
-        optBtn.ZIndex = 51
-        optBtn.Parent = list
+        local foList = Instance.new("Frame")
+        foList.Size = UDim2.new(1, -12, 1, -28)
+        foList.Position = UDim2.new(0, 6, 0, 24)
+        foList.BackgroundTransparency = 1
+        foList.ZIndex = 201
+        foList.Parent = flyout
 
-        optBtn.MouseButton1Click:Connect(function()
-            selected = opt
-            bLbl.Text = opt
-            toggleMenu()
-            if callback then callback(opt) end
-        end)
-    end
+        local foLayout = Instance.new("UIListLayout")
+        foLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        foLayout.Padding = UDim.new(0, 3)
+        foLayout.Parent = foList
+
+        for _, opt in ipairs(options) do
+            local optBtn = Instance.new("TextButton")
+            optBtn.Size = UDim2.new(1, 0, 0, 26)
+            optBtn.BackgroundColor3 = (opt == selected) and Color3.fromRGB(32, 32, 32) or Color3.fromRGB(18, 18, 18)
+            optBtn.BorderSizePixel = 0
+            optBtn.Text = ""
+            optBtn.AutoButtonColor = false
+            optBtn.ZIndex = 202
+            optBtn.Parent = foList
+
+            local oCorner = Instance.new("UICorner")
+            oCorner.CornerRadius = Theme.Corners.Element
+            oCorner.Parent = optBtn
+
+            local oStroke = Instance.new("UIStroke")
+            oStroke.Color = (opt == selected) and Color3.fromRGB(120, 120, 120) or Color3.fromRGB(40, 40, 40)
+            oStroke.Thickness = 1
+            oStroke.Parent = optBtn
+
+            local optLbl = Instance.new("TextLabel")
+            optLbl.Text = opt
+            optLbl.Font = (opt == selected) and Theme.Fonts.Header or Theme.Fonts.Body
+            optLbl.TextSize = 11
+            optLbl.TextColor3 = (opt == selected) and Theme.Colors.TextPrimary or Theme.Colors.TextSecondary
+            optLbl.TextXAlignment = Enum.TextXAlignment.Left
+            optLbl.Size = UDim2.new(1, -16, 1, 0)
+            optLbl.Position = UDim2.new(0, 8, 0, 0)
+            optLbl.BackgroundTransparency = 1
+            optLbl.ZIndex = 203
+            optLbl.Parent = optBtn
+
+            optBtn.MouseEnter:Connect(function()
+                TweenService:Create(optBtn, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(40, 40, 40) }):Play()
+            end)
+            optBtn.MouseLeave:Connect(function()
+                TweenService:Create(optBtn, TweenInfo.new(0.12), {
+                    BackgroundColor3 = (opt == selected) and Color3.fromRGB(32, 32, 32) or Color3.fromRGB(18, 18, 18)
+                }):Play()
+            end)
+
+            optBtn.MouseButton1Click:Connect(function()
+                selected = opt
+                bLbl.Text = opt
+                flyout:Destroy()
+                Hub._activeFlyout = nil
+                if callback then callback(opt) end
+            end)
+        end
+    end)
 
     return {
         Set = function(v) selected = v bLbl.Text = v if callback then callback(v) end end,
@@ -2435,14 +2561,12 @@ local function addButton(sec, title, callback)
     btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Theme.Colors.Card }):Play()
     end)
-    btn.MouseButton1Click:Connect(function()
-        if callback then callback() end
-    end)
+    btn.MouseButton1Click:Connect(function() if callback then callback() end end)
     return btn
 end
 
 -- =====================================================================
--- 11. TAB PAGE BUILDER (ALL CHECKBOXES INITIALIZED TO FALSE)
+-- 11. TAB PAGE BUILDER
 -- =====================================================================
 function Hub:BuildPages()
     -- Tab 1: Catching
@@ -2493,15 +2617,9 @@ function Hub:BuildPages()
     end)
 
     local qbSec2 = addSection(qbPage, "Trajectory & Ballistics")
-    addToggle(qbSec2, "Auto Angle", State.QB.AutoAngle, function(v)
-        State.QB.AutoAngle = v
-    end)
-    addToggle(qbSec2, "Auto Throw Type (Bullet / Lob)", State.QB.AutoThrowType, function(v)
-        State.QB.AutoThrowType = v
-    end)
-    addToggle(qbSec2, "Anti-Wobble / Perfect Spiral", State.QB.AntiWobble, function(v)
-        State.QB.AntiWobble = v
-    end)
+    addToggle(qbSec2, "Auto Angle", State.QB.AutoAngle, function(v) State.QB.AutoAngle = v end)
+    addToggle(qbSec2, "Auto Throw Type (Bullet / Lob)", State.QB.AutoThrowType, function(v) State.QB.AutoThrowType = v end)
+    addToggle(qbSec2, "Anti-Wobble / Perfect Spiral", State.QB.AntiWobble, function(v) State.QB.AntiWobble = v end)
     addSlider(qbSec2, "Lead Prediction Time", 0.2, 2.0, State.QB.LeadPredictionTime, 0.05, "s", function(v)
         State.QB.LeadPredictionTime = v
     end)
@@ -2565,76 +2683,46 @@ function Hub:BuildPages()
     -- Tab 5: Trolling
     local trolPage = self:CreateTab("Trolling")
     local trSec = addSection(trolPage, "Miscellaneous")
-    addToggle(trSec, "Spinbot", State.Trolling.Spinbot, function(v)
-        State.Trolling.Spinbot = v
-    end)
+    addToggle(trSec, "Spinbot", State.Trolling.Spinbot, function(v) State.Trolling.Spinbot = v end)
     addSlider(trSec, "Spinbot Yaw Speed", 5, 80, State.Trolling.SpinSpeed, 5, " deg/s", function(v)
         State.Trolling.SpinSpeed = v
     end)
-    addToggle(trSec, "Ball Fling Impulse", State.Trolling.BallFling, function(v)
-        State.Trolling.BallFling = v
-    end)
+    addToggle(trSec, "Ball Fling Impulse", State.Trolling.BallFling, function(v) State.Trolling.BallFling = v end)
 
     -- Tab 6: Automatics
     local autoPage = self:CreateTab("Automatics")
     local autSec = addSection(autoPage, "Autonomous Assistance")
-    addToggle(autSec, "Autonomous Catch", State.Automatics.AutoCatch, function(v)
-        State.Automatics.AutoCatch = v
-    end)
+    addToggle(autSec, "Autonomous Catch", State.Automatics.AutoCatch, function(v) State.Automatics.AutoCatch = v end)
     addSlider(autSec, "Auto Catch Range", 5, 30, State.Automatics.AutoCatchDistance, 1, " studs", function(v)
         State.Automatics.AutoCatchDistance = v
     end)
-    addToggle(autSec, "Autonomous Intercept Guide", State.Automatics.AutoIntercept, function(v)
-        State.Automatics.AutoIntercept = v
-    end)
-    addToggle(autSec, "Autonomous Forward Dive", State.Automatics.AutoDive, function(v)
-        State.Automatics.AutoDive = v
-    end)
+    addToggle(autSec, "Autonomous Intercept Guide", State.Automatics.AutoIntercept, function(v) State.Automatics.AutoIntercept = v end)
+    addToggle(autSec, "Autonomous Forward Dive", State.Automatics.AutoDive, function(v) State.Automatics.AutoDive = v end)
     addSlider(autSec, "Auto Dive Distance", 10, 40, State.Automatics.AutoDiveDistance, 1, " studs", function(v)
         State.Automatics.AutoDiveDistance = v
     end)
-    addToggle(autSec, "Autonomous Dead Ball Pickup", State.Automatics.AutoPick, function(v)
-        State.Automatics.AutoPick = v
-    end)
+    addToggle(autSec, "Autonomous Dead Ball Pickup", State.Automatics.AutoPick, function(v) State.Automatics.AutoPick = v end)
     addSlider(autSec, "Auto Pick Distance", 6, 30, State.Automatics.AutoPickDistance, 1, " studs", function(v)
         State.Automatics.AutoPickDistance = v
     end)
 
     -- Tab 7: Visuals
     local visPage = self:CreateTab("Visuals")
-    local vSec1 = addSection(visPage, "Football Tracking")
-    addToggle(vSec1, "Enable Ball Visuals", State.Visuals.BallMaster, function(v)
-        State.Visuals.BallMaster = v
-    end)
-    addToggle(vSec1, "Ball Highlight (White Chams)", State.Visuals.BallHighlight, function(v)
-        State.Visuals.BallHighlight = v
-    end)
-    addToggle(vSec1, "Ball Trajectory Arc", State.Visuals.BallTrajectory, function(v)
-        State.Visuals.BallTrajectory = v
-    end)
-    addToggle(vSec1, "Ball Landing Circle", State.Visuals.BallLandingMarker, function(v)
-        State.Visuals.BallLandingMarker = v
-    end)
-    addToggle(vSec1, "Ball Distance Tag", State.Visuals.BallDistance, function(v)
-        State.Visuals.BallDistance = v
-    end)
+    local vSec1 = addSection(visPage, "Football Tracking (All Balls)")
+    addToggle(vSec1, "Enable Ball Visuals", State.Visuals.BallMaster, function(v) State.Visuals.BallMaster = v end)
+    addToggle(vSec1, "Ball Highlight (White Chams)", State.Visuals.BallHighlight, function(v) State.Visuals.BallHighlight = v end)
+    addToggle(vSec1, "Ball Trajectory Arc", State.Visuals.BallTrajectory, function(v) State.Visuals.BallTrajectory = v end)
+    addToggle(vSec1, "Ball Landing Circle", State.Visuals.BallLandingMarker, function(v) State.Visuals.BallLandingMarker = v end)
+    addToggle(vSec1, "Ball Distance Tag", State.Visuals.BallDistance, function(v) State.Visuals.BallDistance = v end)
 
     local vSec2 = addSection(visPage, "Player Visuals")
-    addToggle(vSec2, "Enable Player Visuals", State.Visuals.PlayerMaster, function(v)
-        State.Visuals.PlayerMaster = v
-    end)
+    addToggle(vSec2, "Enable Player Visuals", State.Visuals.PlayerMaster, function(v) State.Visuals.PlayerMaster = v end)
     addDropdown(vSec2, "Filter Mode", { "Opponent", "Team", "Everyone" }, State.Visuals.PlayerFilter, function(v)
         State.Visuals.PlayerFilter = v
     end)
-    addToggle(vSec2, "2D Bounding Boxes", State.Visuals.PlayerBoxes, function(v)
-        State.Visuals.PlayerBoxes = v
-    end)
-    addToggle(vSec2, "Tracers", State.Visuals.PlayerTracers, function(v)
-        State.Visuals.PlayerTracers = v
-    end)
-    addToggle(vSec2, "Nametags", State.Visuals.PlayerNames, function(v)
-        State.Visuals.PlayerNames = v
-    end)
+    addToggle(vSec2, "2D Bounding Boxes", State.Visuals.PlayerBoxes, function(v) State.Visuals.PlayerBoxes = v end)
+    addToggle(vSec2, "Tracers", State.Visuals.PlayerTracers, function(v) State.Visuals.PlayerTracers = v end)
+    addToggle(vSec2, "Nametags (Above Head)", State.Visuals.PlayerNames, function(v) State.Visuals.PlayerNames = v end)
 
     -- Tab 8: Misc
     local miscPage = self:CreateTab("Misc")
@@ -2652,9 +2740,7 @@ function Hub:BuildPages()
         local canWrite = typeof(writefile) == "function" and typeof(makefolder) == "function"
         if canWrite then
             pcall(function()
-                if not (typeof(isfolder) == "function" and isfolder("savior_ff2")) then
-                    makefolder("savior_ff2")
-                end
+                if not (typeof(isfolder) == "function" and isfolder("savior_ff2")) then makefolder("savior_ff2") end
                 writefile("savior_ff2/config.json", HttpService:JSONEncode(State))
             end)
             self:Notify("Config Saved", "Settings persisted to savior_ff2/config.json", 2.5)
@@ -2679,32 +2765,43 @@ function Hub:BuildPages()
             self:Notify("Notice", "No existing configuration file found", 2.5)
         end
     end)
-    addButton(cSec, "Log Out & Clear Session", function()
+    addButton(cSec, "Log Out & Relog (Account Switch)", function()
         AccountDB.clearSession()
-        self:Notify("Session Cleared", "You have been logged out. Re-run script to login.", 3)
-        self:Unload()
+        self:ToggleUI(false)
+        self:ShowAuthWindow(Hub.ScreenGui, function(username)
+            local footer = Hub.Sidebar and Hub.Sidebar.Parent:FindFirstChild("ProfileFooter")
+            local welcomeLbl = footer and footer:FindFirstChildOfClass("TextLabel")
+            if welcomeLbl then welcomeLbl.Text = "Welcome, " .. string.sub(username, 1, 10) end
+            Hub:ToggleUI(true)
+        end)
     end)
-    addButton(cSec, "Unload Savior & Clean Memory", function()
-        self:Unload()
-    end)
+    addButton(cSec, "Unload Savior & Clean Memory", function() self:Unload() end)
 end
 
 function Hub:Unload()
-    for _, conn in ipairs(self._connections) do
-        pcall(function() conn:Disconnect() end)
-    end
+    for _, conn in ipairs(self._connections) do pcall(function() conn:Disconnect() end) end
     self._connections = {}
 
     CatchingSystem:ResetHitboxes()
 
-    if VisualsSystem._ballHighlight then VisualsSystem._ballHighlight:Destroy() end
-    if VisualsSystem._ballText then VisualsSystem._ballText:Remove() end
-    if VisualsSystem._ballCircle then VisualsSystem._ballCircle:Remove() end
-    for _, line in ipairs(VisualsSystem._ballLines) do line:Remove() end
+    for _, entry in pairs(VisualsSystem._ballDrawings) do
+        if entry.Highlight then entry.Highlight:Destroy() end
+        if entry.Text then entry.Text:Remove() end
+        if entry.Circle then entry.Circle:Remove() end
+        for _, line in ipairs(entry.Lines) do line:Remove() end
+    end
+    VisualsSystem._ballDrawings = {}
+
     for _, entry in pairs(VisualsSystem._playerDrawings) do
         if entry.Box then entry.Box:Remove() end
         if entry.Tracer then entry.Tracer:Remove() end
         if entry.Name then entry.Name:Remove() end
+    end
+    VisualsSystem._playerDrawings = {}
+
+    if Hub._activeFlyout then
+        Hub._activeFlyout:Destroy()
+        Hub._activeFlyout = nil
     end
 
     pcall(function()
@@ -2720,15 +2817,12 @@ function Hub:Unload()
         self.ScreenGui = nil
     end
 
-    if getgenv then
-        getgenv().SaviorInstance = nil
-    end
+    if getgenv then getgenv().SaviorInstance = nil end
 end
 
 -- =====================================================================
 -- 12. SYSTEM LIFECYCLE EXECUTION
 -- =====================================================================
-VisualsSystem:Init()
 Hub:Init()
 
 local spinAngle = 0
@@ -2748,7 +2842,7 @@ local heartbeatConn = RunService.Heartbeat:Connect(function()
         end
 
         if State.Trolling.BallFling then
-            local football = Environment.getFootball()
+            local football = Environment.getClosestFootball()
             local _, hrp = Environment.getLocalCharacter()
             if football and hrp and (football.Position - hrp.Position).Magnitude < 10 then
                 football.AssemblyAngularVelocity = Vector3.new(10000, 10000, 10000)
@@ -2792,6 +2886,4 @@ local plrLeaveConn = Players.PlayerRemoving:Connect(function(plr)
 end)
 table.insert(Hub._connections, plrLeaveConn)
 
-if getgenv then
-    getgenv().SaviorInstance = Hub
-end
+if getgenv then getgenv().SaviorInstance = Hub end
